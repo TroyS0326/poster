@@ -12,6 +12,8 @@ def load_config():
         'IG_BUSINESS_ID': os.getenv('IG_BUSINESS_ID'),
         'IMG_PUBLIC_URL_BASE': os.getenv('IMG_PUBLIC_URL_BASE'),
         'LOG_PATH': os.getenv('LOG_PATH', 'logs/auto420bot.log'),
+        'DAILY_POST_TIMES': os.getenv('DAILY_POST_TIMES', '09:00'),
+        'SCHEDULER_TIMEZONE': os.getenv('SCHEDULER_TIMEZONE', 'UTC'),
         'POST_INTERVAL_MIN': int(os.getenv('POST_INTERVAL_MIN', 3)),
         'POST_INTERVAL_MAX': int(os.getenv('POST_INTERVAL_MAX', 4)),
         'RANDOMIZE_INTERVAL_MINUTES': int(os.getenv('RANDOMIZE_INTERVAL_MINUTES', 30)),
