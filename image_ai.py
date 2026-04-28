@@ -6,19 +6,15 @@ import random
 
 MODEL = "dreamshaper_8.safetensors"
 
-# Realism-focused prompt templates. Edit/add more as you wish!
 PROMPTS = [
-    # Replace these with what you want most
-    "Enter your prompt "
-    "Here. make sure"
-    "Every line is formatted like this"
-    "****************************************************************************************************************** "
-    "**************************************************************************************************************************"
-    "**********************************************"
+    "High quality, 8k resolution, photorealistic luxury streetwear flat lay for XeanVI, cinematic lighting, studio shadows, professional product photography",
+    "Digital art, masterpiece, futuristic XeanVI fashion campaign scene, vibrant colors, highly detailed, dramatic composition, trending on artstation",
+    "Editorial style lifestyle shot of a confident model wearing XeanVI apparel in an urban setting, crisp textures, golden hour lighting, ultra detailed",
+    "Minimalist premium branding scene for XeanVI with clean typography space, premium fabric close-up, modern aesthetic, soft cinematic light",
 ]
 
 NEGATIVE = (
-    "Enter negative prompts (words) here"
+    "low quality, bad anatomy, worst quality, ugly, blurry, text, watermark, signature"
 )
 
 def generate_image(config):
