@@ -64,10 +64,26 @@ GENERIC_IMAGE_ONLY = [
     "command center", "dashboard", "dark-mode", "dark mode", "ui panels", "fintech ui",
 ]
 ANATOMY_RISK_TERMS = [
-    "hand", "hands", "finger", "fingers", "face", "person", "man", "woman", "body", "arm",
+    "hand", "hands", "finger", "fingers", "face", "person", "people", "human", "humans", "man", "woman", "body", "arm",
     "holding", "over-the-shoulder", "portrait", "beard", "eyes",
 ]
 BLOCKED_ANATOMY_PHRASES = ["paper held", "holding paper", "handwritten chart held", "person holding"]
+
+SAFE_NEGATED_ANATOMY_PHRASES = [
+    "no hands", "no hand", "no fingers", "no finger", "no faces", "no face", "no arms", "no arm",
+    "no body parts", "no people", "no person", "no humans", "no human", "without hands", "without faces",
+    "without people", "silhouette-free", "object-only",
+]
+
+
+def _remove_safe_negated_anatomy_phrases(text: str) -> str:
+    cleaned = text.lower()
+    for phrase in SAFE_NEGATED_ANATOMY_PHRASES:
+        pattern = rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])"
+        cleaned = re.sub(pattern, " ", cleaned, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 SAFE_VISUAL_CUES = [
     "product ui", "mockup", "empty desk", "flat lay", "abstract", "interface", "dashboard cards",
     "workstation", "notebook", "keyboard", "monitor glow", "rule-board", "process diagram",
@@ -158,7 +174,9 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
     if "silhouette" in lowered and not ("no visible hands" in lowered and "no visible face" in lowered and "no visible limbs" in lowered):
         return False, "silhouette usage must explicitly ban visible hands/face/limbs"
 
-    if any(_phrase_matches(lowered, term) for term in ANATOMY_RISK_TERMS):
+    anatomy_scan_text = _remove_safe_negated_anatomy_phrases(lowered)
+
+    if any(_phrase_matches(anatomy_scan_text, term) for term in ANATOMY_RISK_TERMS):
         return False, "image prompt contains anatomy-risk terms"
     if any(_phrase_matches(lowered, term) for term in ["money", "luxury", "lamborghini", "rolex", "mansion"]):
         return False, "image prompt contains banned cash/luxury symbolism"
