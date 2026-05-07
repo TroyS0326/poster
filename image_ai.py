@@ -1,65 +1,32 @@
-import requests
-import time
-import os
 import base64
+import os
 import random
+from datetime import datetime
+import requests
 
-MODEL = "dreamshaper_8.safetensors"
 
-PROMPTS = [
-    "High quality, 8k resolution, photorealistic luxury streetwear flat lay for XeanVI, cinematic lighting, studio shadows, professional product photography",
-    "Digital art, masterpiece, futuristic XeanVI fashion campaign scene, vibrant colors, highly detailed, dramatic composition, trending on artstation",
-    "Editorial style lifestyle shot of a confident model wearing XeanVI apparel in an urban setting, crisp textures, golden hour lighting, ultra detailed",
-    "Minimalist premium branding scene for XeanVI with clean typography space, premium fabric close-up, modern aesthetic, soft cinematic light",
-]
-
-NEGATIVE = (
-    "low quality, bad anatomy, worst quality, ugly, blurry, text, watermark, signature"
-)
-
-def generate_image(config):
-    prompt = random.choice(PROMPTS)
+def generate_image(config, image_prompt: str, negative_prompt: str, logger):
     payload = {
-        "prompt": prompt,
-        "negative_prompt": NEGATIVE,
-        "steps": 35,  # up this for more detail if you like
-        "width": 1080,
-        "height": 1350,
-        "sampler_index": "DPM++ 2M Karras",  # Try different samplers if you want even more realism
-        "override_settings": {"sd_model_checkpoint": MODEL},
+        "prompt": image_prompt,
+        "negative_prompt": negative_prompt,
+        "steps": 30,
+        "width": config.image_width,
+        "height": config.image_height,
+        "override_settings": {"sd_model_checkpoint": config.sd_model},
     }
-
     try:
-        r = requests.post(f"{config['SD_API_URL']}/sdapi/v1/txt2img", json=payload)
-        r.raise_for_status()
-        result = r.json()
-        image_b64 = result["images"][0]
-        os.makedirs("images", exist_ok=True)
-        img_path = f"images/gen_{int(time.time())}.png"
-        with open(img_path, "wb") as f:
-            f.write(base64.b64decode(image_b64))
-        img_url = config['IMG_PUBLIC_URL_BASE'] + os.path.basename(img_path)
-        print(f"[REALISM][{MODEL}] Generated image: {img_path}")
-        print(f"Prompt used: {prompt}")
-        print(f"Public URL: {img_url}")
-        return img_path, img_url, prompt, MODEL
-    except Exception as e:
-        print(f"Error generating image: {e}")
-        return None, None, None, MODEL
-
-if __name__ == "__main__":
-    config = {
-        "SD_API_URL": "http://127.0.0.1:7860",
-        "IMG_PUBLIC_URL_BASE": "path to your images",
-    }
-
-    num_images = 8
-    for i in range(num_images):
-        print(f"\n--- Generating image {i+1} of {num_images} ---")
-        image_path, image_url, prompt, model_choice = generate_image(config)
-        if image_path and image_url:
-            print(f"SUCCESS: {image_url}")
-        else:
-            print("FAILED to generate image.")
-
-    print("\nAll done!")
+        response = requests.post(f"{config.sd_api_url}/sdapi/v1/txt2img", json=payload, timeout=120)
+        response.raise_for_status()
+        data = response.json()
+        if not data.get("images"):
+            logger.error("image generation failed: no images returned")
+            return None
+        os.makedirs("images/generated", exist_ok=True)
+        filename = f"xeanvi_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000,9999)}.png"
+        local_path = os.path.join("images/generated", filename)
+        with open(local_path, "wb") as file:
+            file.write(base64.b64decode(data["images"][0]))
+        return {"local_path": local_path, "filename": filename, "image_prompt": image_prompt, "model_name": config.sd_model}
+    except Exception as exc:
+        logger.error("image generation failed: %s", exc)
+        return None

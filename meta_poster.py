@@ -1,29 +1,39 @@
 import requests
 
-def post_to_meta(caption, image_url, config):
-    # Post to Facebook Page
-    fb_endpoint = f"https://graph.facebook.com/v20.0/{config['FB_PAGE_ID']}/photos"
-    fb_payload = {
-        "caption": caption,
-        "url": image_url,
-        "access_token": config['META_ACCESS_TOKEN']
-    }
-    fb_resp = requests.post(fb_endpoint, data=fb_payload).json()
 
-    # Post to Instagram (container, then publish)
-    ig_container_url = f"https://graph.facebook.com/v20.0/{config['IG_BUSINESS_ID']}/media"
-    ig_publish_url = f"https://graph.facebook.com/v20.0/{config['IG_BUSINESS_ID']}/media_publish"
-    media_payload = {
-        "image_url": image_url,
-        "caption": caption,
-        "access_token": config['META_ACCESS_TOKEN']
-    }
-    media_resp = requests.post(ig_container_url, data=media_payload).json()
-    creation_id = media_resp.get("id")
-    publish_resp = {}
-    if creation_id:
-        publish_resp = requests.post(ig_publish_url, data={
-            "creation_id": creation_id,
-            "access_token": config['META_ACCESS_TOKEN']
-        }).json()
-    return {"fb": fb_resp, "ig": publish_resp}
+def _graph_url(version: str, path: str) -> str:
+    return f"https://graph.facebook.com/{version}/{path.lstrip('/')}"
+
+
+def post_to_meta(caption: str, image_url: str, config, logger):
+    if config.dry_run:
+        logger.info("DRY_RUN enabled: would post caption and image_url=%s", image_url)
+        return {"dry_run": True, "facebook": {"status": "skipped"}, "instagram": {"status": "skipped"}}
+
+    token = config.meta_access_token
+    fb_result = {"status": "failed"}
+    ig_result = {"status": "failed"}
+
+    fb_resp = requests.post(
+        _graph_url(config.meta_graph_version, f"{config.fb_page_id}/photos"),
+        data={"caption": caption, "url": image_url, "access_token": token}, timeout=45,
+    )
+    fb_json = fb_resp.json()
+    fb_result = {"status": "success" if fb_resp.ok and not fb_json.get("error") else "failed", "response": fb_json}
+
+    media_resp = requests.post(
+        _graph_url(config.meta_graph_version, f"{config.ig_business_id}/media"),
+        data={"image_url": image_url, "caption": caption, "access_token": token}, timeout=45,
+    )
+    media_json = media_resp.json()
+    if media_resp.ok and not media_json.get("error") and media_json.get("id"):
+        publish_resp = requests.post(
+            _graph_url(config.meta_graph_version, f"{config.ig_business_id}/media_publish"),
+            data={"creation_id": media_json["id"], "access_token": token}, timeout=45,
+        )
+        publish_json = publish_resp.json()
+        ig_result = {"status": "success" if publish_resp.ok and not publish_json.get("error") else "failed", "container": media_json, "publish": publish_json}
+    else:
+        ig_result = {"status": "failed", "container": media_json, "publish": {"skipped": True}}
+
+    return {"dry_run": False, "facebook": fb_result, "instagram": ig_result}
