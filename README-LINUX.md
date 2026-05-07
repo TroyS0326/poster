@@ -17,6 +17,7 @@ Set in `.env`:
 - `IMAGE_PROVIDER=replicate`
 - `REPLICATE_API_TOKEN=...` (copy from your Replicate account API tokens page)
 - `REPLICATE_MODEL=black-forest-labs/flux-schnell` (or another compatible Replicate model slug)
+- `REPLICATE_OUTPUT_FORMAT=jpg` (recommended for Meta/Instagram compatibility)
 
 With Replicate enabled, local Vast.ai/AUTOMATIC1111 Stable Diffusion WebUI is not required for image generation.
 With `IMAGE_PROVIDER=replicate`, Vast.ai `dashboard.py` public image hosting is not required for Meta posting.
@@ -39,6 +40,7 @@ Required always: `GEMINI_API_KEY`.
 `GEMINI_MODEL` defaults to `gemini-1.5-flash` and can be changed if Google changes available model names.
 When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` and `IMG_PUBLIC_URL_BASE` are required.
 When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required (`IMG_PUBLIC_URL_BASE` is optional).
+For Meta/Instagram compatibility, use `REPLICATE_OUTPUT_FORMAT=jpg`. WebP output URLs may be rejected by Meta/Instagram.
 Required only when `DRY_RUN=false` and `MANUAL_REVIEW_MODE=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
 Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENERATION_ATTEMPTS=3`.
 

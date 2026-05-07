@@ -56,6 +56,7 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
         "input": {
             "prompt": image_prompt,
             "negative_prompt": negative_prompt,
+            "output_format": config.replicate_output_format or "jpg",
         }
     }
     try:
@@ -68,7 +69,17 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
         if create_response.status_code in {401, 403}:
             logger.error("replicate authentication failed; check REPLICATE_API_TOKEN")
             return None
-        create_response.raise_for_status()
+        if not create_response.ok:
+            try:
+                error_body = create_response.json()
+            except ValueError:
+                error_body = create_response.text
+            logger.error(
+                "replicate create prediction failed with status %s: %s",
+                create_response.status_code,
+                error_body,
+            )
+            return None
         prediction = create_response.json()
         prediction_id = prediction.get("id")
         if not prediction_id:
