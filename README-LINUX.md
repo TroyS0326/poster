@@ -15,7 +15,7 @@ Use Replicate to avoid managing Stable Diffusion server installs on Vast.ai.
 
 Set in `.env`:
 - `IMAGE_PROVIDER=replicate`
-- `REPLICATE_API_TOKEN=...` (your Replicate API token)
+- `REPLICATE_API_TOKEN=...` (copy from your Replicate account API tokens page)
 - `REPLICATE_MODEL=black-forest-labs/flux-schnell` (or another compatible Replicate model slug)
 
 With Replicate enabled, local Vast.ai/AUTOMATIC1111 Stable Diffusion WebUI is not required for image generation.
@@ -36,6 +36,7 @@ Set `DRY_RUN=true` in `.env`. Bot will generate and log, but will not call Meta 
 
 ## Env vars
 Required always: `GEMINI_API_KEY`.
+`GEMINI_MODEL` defaults to `gemini-1.5-flash` and can be changed if Google changes available model names.
 When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` and `IMG_PUBLIC_URL_BASE` are required.
 When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required (`IMG_PUBLIC_URL_BASE` is optional).
 Required only when `DRY_RUN=false` and `MANUAL_REVIEW_MODE=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.

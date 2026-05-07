@@ -49,7 +49,7 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
         return None
     owner, model = model_path.split("/", 1)
     headers = {
-        "Authorization": f"Token {config.replicate_api_token}",
+        "Authorization": f"Bearer {config.replicate_api_token}",
         "Content-Type": "application/json",
     }
     payload = {
@@ -65,6 +65,9 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
             headers=headers,
             timeout=60,
         )
+        if create_response.status_code in {401, 403}:
+            logger.error("replicate authentication failed; check REPLICATE_API_TOKEN")
+            return None
         create_response.raise_for_status()
         prediction = create_response.json()
         prediction_id = prediction.get("id")
