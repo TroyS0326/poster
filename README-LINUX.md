@@ -10,6 +10,16 @@ Python automation bot that every 4 hours: generates a XeanVI-compliant caption +
 4. Optional local image hosting: `python dashboard.py`
 5. Run bot: `python main.py`
 
+## Recommended simple setup: hosted image API
+Use Replicate to avoid managing Stable Diffusion server installs on Vast.ai.
+
+Set in `.env`:
+- `IMAGE_PROVIDER=replicate`
+- `REPLICATE_API_TOKEN=...` (your Replicate API token)
+- `REPLICATE_MODEL=black-forest-labs/flux-schnell` (or another compatible Replicate model slug)
+
+With Replicate enabled, local Vast.ai/AUTOMATIC1111 Stable Diffusion WebUI is not required for image generation.
+
 ## Important config notes
 - `.env` is local-only and must never be committed.
 - Use `.env.example` as your template.
@@ -23,7 +33,9 @@ Python automation bot that every 4 hours: generates a XeanVI-compliant caption +
 Set `DRY_RUN=true` in `.env`. Bot will generate and log, but will not call Meta Graph posting endpoints.
 
 ## Env vars
-Required always: `GEMINI_API_KEY`, `SD_API_URL`, `IMG_PUBLIC_URL_BASE`.
+Required always: `GEMINI_API_KEY`, `IMG_PUBLIC_URL_BASE`.
+When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` is required.
+When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required.
 Required only when `DRY_RUN=false` and `MANUAL_REVIEW_MODE=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
 Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENERATION_ATTEMPTS=3`.
 
@@ -42,3 +54,10 @@ Posts are marketing/educational only. Not financial advice. Trading involves ris
 - Gemini/API malformed response -> safe fallback package is used.
 - SD API failure -> post skipped safely.
 - FB success + IG fail -> both statuses logged independently.
+
+## Optional advanced local GPU setup (AUTOMATIC1111)
+If you prefer local image generation, keep `IMAGE_PROVIDER=auto1111` and run Stable Diffusion WebUI with an accessible API endpoint in `SD_API_URL`.
+
+## Quick syntax check
+Run:
+- `python -m py_compile *.py`

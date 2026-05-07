@@ -5,7 +5,10 @@ from dotenv import load_dotenv
 
 @dataclass
 class Config:
+    image_provider: str
     sd_api_url: str
+    replicate_api_token: str
+    replicate_model: str
     meta_access_token: str
     fb_page_id: str
     ig_business_id: str
@@ -33,7 +36,10 @@ def _to_bool(value: str, default: bool = False) -> bool:
 def load_config() -> Config:
     load_dotenv()
     return Config(
+        image_provider=os.getenv("IMAGE_PROVIDER", "auto1111").strip().lower(),
         sd_api_url=os.getenv("SD_API_URL", "http://127.0.0.1:7860"),
+        replicate_api_token=os.getenv("REPLICATE_API_TOKEN", ""),
+        replicate_model=os.getenv("REPLICATE_MODEL", "black-forest-labs/flux-schnell"),
         meta_access_token=os.getenv("META_ACCESS_TOKEN", ""),
         fb_page_id=os.getenv("FB_PAGE_ID", ""),
         ig_business_id=os.getenv("IG_BUSINESS_ID", ""),
@@ -57,8 +63,13 @@ def validate_required_config(config: Config) -> tuple[bool, list[str]]:
     missing = []
     if not config.gemini_api_key:
         missing.append("GEMINI_API_KEY")
-    if not config.sd_api_url:
+    if config.image_provider == "auto1111" and not config.sd_api_url:
         missing.append("SD_API_URL")
+    if config.image_provider == "replicate":
+        if not config.replicate_api_token:
+            missing.append("REPLICATE_API_TOKEN")
+        if not config.replicate_model:
+            missing.append("REPLICATE_MODEL")
     if not config.img_public_url_base:
         missing.append("IMG_PUBLIC_URL_BASE")
     if not config.dry_run and not config.manual_review_mode:
