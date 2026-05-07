@@ -34,7 +34,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "One red trade can flip your brain from patient to reckless in seconds. That revenge click feels like control, but it is usually just pain wearing a strategy mask. XeanVI is built to force a pause: validate your setup, respect your risk bracket, then decide if the trade still makes sense. If your pulse is leading, step back before risk size goes up. Not financial advice. Trading involves risk. #XeanVI #TradingPsychology #RiskManagement",
             "image_concept": "A tense pause moment before an emotional re-entry, emphasizing restraint over impulse.",
             "image_prompt": "Cinematic over-shoulder scene of a trader's hand hovering above mouse after a recent losing trade, risk checklist card in foreground, muted monitor glow, shallow depth of field, late afternoon desk environment, serious restrained mood, premium fintech editorial realism, abstract blurred charts only, vertical 1080x1350",
-            "negative_prompt": "fake PnL, profit screenshots, broker logos, luxury lifestyle, money stacks, tickers, hype text, low detail, cartoon",
+            "negative_prompt": "fabricated performance screens, platform branding, flashy lifestyle props, currency imagery, readable market symbols, hype text, low detail, cartoon",
         },
         {
             "pillar": "The trader who abandons their plan too early",
@@ -42,7 +42,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "Most plan failures are not bad plans, they are early exits under pressure. You define rules at 7:30 AM, then fear rewrites them at 9:47 AM. XeanVI helps keep execution tied to your preplanned logic so panic does not become policy. If your system says wait, waiting is the trade. Not financial advice. Trading involves risk. #DayTrading #ExecutionDiscipline #XeanVI",
             "image_concept": "A visual contrast between written premarket rules and in-session emotional hesitation.",
             "image_prompt": "Macro photo of handwritten entry and exit rules beside mechanical keyboard, blurred monitor in background with neutral chart shapes, cool morning window light, clean desk texture, reflective mood, realistic editorial photography, vertical 1080x1350 composition",
-            "negative_prompt": "readable stock symbols, fake gains, flashy neon overload, promotional banners, logos, dollar signs",
+            "negative_prompt": "readable market symbols, fabricated performance visuals, flashy neon overload, promotional banners, brand marks, currency symbols",
         },
         {
             "pillar": "Paper trading as a serious testing lab, not a toy",
@@ -50,7 +50,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "Myth: paper trading is fake, so it does not matter. Reality: sloppy paper habits become expensive live habits. Treat simulation like a lab: log setup quality, rule adherence, and exit behavior. XeanVI leans into this by validating process before pressure capital is involved. Practice is only useful when it is structured. Not financial advice. Trading involves risk. #PaperTrading #TradingProcess #XeanVI",
             "image_concept": "A controlled lab-like environment for testing trading rules before live deployment.",
             "image_prompt": "Modern sandbox-style trading lab concept, clean workstation with notebook labeled test cases, blurred chart panels on side monitor, neutral grayscale and teal palette, soft overhead lighting, analytical calm mood, premium fintech design language, vertical 1080x1350",
-            "negative_prompt": "casino vibe, jackpot imagery, fake broker UI, promises, stock picks, high saturation meme style",
+            "negative_prompt": "casino-like visuals, jackpot imagery, fabricated platform interface, outcome promises, recommendation-style labels, high saturation meme style",
         },
         {
             "pillar": "Why automation should enforce rules, not replace judgment",
@@ -58,7 +58,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "I did not build XeanVI to replace trader judgment. I built it because judgment gets distorted when stress spikes and speed compresses decisions. Automation should handle rule enforcement, not ego. Your edge still comes from preparation, context, and restraint. The tool just helps your rules survive the moment. Not financial advice. Trading involves risk. #BuildInPublic #TradingSystems #XeanVI",
             "image_concept": "Founder desk scene showing human decision-making supported by structured automation.",
             "image_prompt": "Founder workspace with code editor and workflow diagram notes, one monitor showing abstract rule validation cards, warm desk lamp mixed with cool screen light, intentional clutter, thoughtful late-night mood, realistic fintech editorial style, vertical 1080x1350",
-            "negative_prompt": "robot trader fantasy, guaranteed success text, huge profit numbers, logos, luxury office glamour",
+            "negative_prompt": "robot-trader fantasy, certainty slogans, oversized performance numbers, brand marks, glamour-office styling",
         },
         {
             "pillar": "The quiet discipline of walking away from bad setups",
@@ -66,7 +66,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "A setup that almost fits is still a no. The hardest discipline is doing nothing when boredom begs for action. XeanVI reinforces this by making rule misses visible before you commit capital, so passing becomes an active decision, not a missed chance. Protecting your focus is part of protecting your account. Not financial advice. Trading involves risk. #TradingDiscipline #RuleBasedTrading #XeanVI",
             "image_concept": "Calm restraint after rejecting a low-quality setup.",
             "image_prompt": "Empty ergonomic trading chair facing softly glowing monitors after market close, closed notebook with checklist tick marks on desk, gentle dusk lighting, quiet reflective atmosphere, minimal premium fintech aesthetic, vertical social framing 1080x1350",
-            "negative_prompt": "celebration scene, confetti, profit claims, readable ticker recommendations, fake PnL widgets",
+            "negative_prompt": "celebration scene, confetti, outcome claims, readable market-symbol labels, fabricated performance widgets",
         },
         {
             "pillar": "Bracket orders as emotional guardrails",
@@ -74,7 +74,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "Before entry, define the exit framework: stop, target, invalidation. Bracket structure is less about prediction and more about emotional containment once the position is live. XeanVI keeps those guardrails front and center so heat-of-the-moment edits are harder to justify. Rules are boring, and that is why they work. Not financial advice. Trading involves risk. #RiskControl #BracketOrders #XeanVI",
             "image_concept": "An abstract yet practical depiction of risk boundaries around a trade plan.",
             "image_prompt": "Clean fintech interface concept with three labeled abstract zones for stop, target, invalidation, layered as guardrails around a central entry point, isometric camera angle, cool charcoal palette with subtle cyan accents, focused technical mood, no numbers or tickers, vertical 1080x1350",
-            "negative_prompt": "price predictions, rocket emojis, fake account balance, logos, cluttered casino aesthetics",
+            "negative_prompt": "price-prediction visuals, rocket emojis, fabricated account panels, brand marks, cluttered casino-like aesthetics",
         },
         {
             "pillar": "Overtrading from boredom",
@@ -82,7 +82,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "Boredom can be more dangerous than volatility. When nothing clean is there, the mind starts inventing setups just to feel productive. XeanVI helps by forcing setup criteria back into view before execution, so impulse has to argue with your own rules first. Some of your best days are the ones with fewer clicks. Not financial advice. Trading involves risk. #Overtrading #TraderMindset #XeanVI",
             "image_concept": "A split emotional scene showing impulsive clicking versus disciplined waiting.",
             "image_prompt": "Split composition: left side chaotic rapid clicking and scribbled notes, right side composed trader reviewing structured playbook checklist, contrast lighting from harsh red tones to calm blue tones, cinematic documentary style, strong emotional duality, vertical 1080x1350",
-            "negative_prompt": "binary options vibe, guaranteed wins, ticker tips, luxury props, misleading performance charts",
+            "negative_prompt": "binary-style promo vibe, certainty claims, market-symbol tips, glamour props, misleading performance charts",
         },
         {
             "pillar": "The pain of watching a good setup and hesitating",
@@ -90,7 +90,7 @@ def _fallback_packages() -> list[dict]:
             "caption": "You spot the setup, everything aligns, then hesitation freezes your hand for five seconds too long. That sting is real, and repeating it can quietly erode confidence. XeanVI cannot remove emotion, but it can sharpen pre-trade clarity so execution is less ambiguous when the moment arrives. Confidence usually comes from process, not hype. Not financial advice. Trading involves risk. #Execution #TradingPsychology #XeanVI",
             "image_concept": "A high-tension pre-click moment where clarity and hesitation collide.",
             "image_prompt": "Over-the-shoulder close shot of trader pausing before clicking execution button (text unreadable), focus on tense hand posture, dim studio-like trading room with single monitor glow, moody cinematic lighting, emotionally charged but professional fintech realism, vertical 1080x1350",
-            "negative_prompt": "visible stock picks, giant gains, certainty slogans, logos, meme graphics, poor anatomy",
+            "negative_prompt": "visible recommendation labels, oversized performance visuals, certainty slogans, brand marks, meme graphics, poor anatomy",
         },
     ]
 
