@@ -1,5 +1,9 @@
 import re
+
 from prompts import BLOCKED_PHRASES
+
+DISCLOSURE = "Not financial advice. Trading involves risk."
+ALLOWED_DISCLOSURE_LOWER = DISCLOSURE.lower()
 
 GENERIC_PHRASES = [
     "unlock your potential",
@@ -8,30 +12,45 @@ GENERIC_PHRASES = [
     "game changer",
     "cutting edge",
     "seamless experience",
-    "maximize profits",
     "trade smarter not harder",
     "level up your trading",
     "ai-powered success",
-    "dominate the market",
-    "financial freedom",
-    "passive income",
     "never miss a trade",
-    "beat the market",
 ]
 
-UNSAFE_FINANCIAL_PATTERNS = [
-    r"\bthis is financial advice\b",
-    r"\bfinancial advice guaranteed\b",
-    r"\bguaranteed\b",
-    r"\balways\b",
+BANNED_KEYWORD_PHRASES = BLOCKED_PHRASES
+BANNED_REGEX_PATTERNS = [
+    r"\bprofit(s|able)?\b",
+    r"\bguarantee(d|s)?\b",
+    r"\bmake(s|ing)? money\b",
+    r"\bwin rate\b",
+    r"\bhigh win rate\b",
     r"\bnever lose\b",
-    r"\brisk-free\b",
+    r"\brisk[- ]free\b",
+    r"\bzero risk\b",
+    r"\bsafe money\b",
+    r"\bget rich\b",
+    r"\beasy income\b",
+    r"\bpassive income\b",
+    r"\bcash\b",
+    r"\bwealth\b",
     r"\bsure thing\b",
-    r"\b100%\b",
-    r"\bprofit machine\b",
+    r"\bcertainty\b",
+    r"\binvestment advice\b",
+    r"\bpersonalized advice\b",
+    r"\bfiduciary\b",
+    r"\bstock pick\b",
+    r"\bbuy alert\b",
+    r"\bsell alert\b",
+    r"\btrade signal(s)?\b",
+    r"\bcopy trading\b",
+    r"\balpaca\b", r"\btd ameritrade\b", r"\brobinhood\b", r"\binteractive brokers\b", r"\be\*trade\b",
+    r"\bcharles schwab\b", r"\bfidelity\b", r"\bwebull\b", r"\btradestation\b", r"\bcoinbase\b", r"\bbinance\b", r"\bkraken\b",
+    r"\bcrypto\b", r"\bbitcoin\b", r"\bbtc\b", r"\bethereum\b", r"\beth\b", r"\bforex\b", r"\bfx\b",
+    r"\boptions\b", r"\bfutures\b", r"\bnft\b", r"\bdefi\b",
+    r"\bthis is financial advice\b", r"\bfinancial advice guaranteed\b", r"\bpersonalized financial advice\b",
 ]
 
-DISCLOSURE = "Not financial advice. Trading involves risk."
 SCENE_CUES = [
     "desk", "workstation", "journal", "notebook", "keyboard", "coffee", "monitor", "chair",
     "lab", "sandbox", "studio", "office", "close-up", "over-shoulder", "split scene", "macro",
@@ -45,25 +64,35 @@ GENERIC_IMAGE_ONLY = [
 ]
 
 
-def _contains_blocked(text: str) -> bool:
-    lowered = text.lower()
-    if any(p in lowered for p in BLOCKED_PHRASES):
-        return True
-    return any(re.search(pattern, lowered) for pattern in UNSAFE_FINANCIAL_PATTERNS)
+def _find_banned_match(text: str, remove_disclosure: bool = False) -> str | None:
+    normalized = text.lower()
+    normalized_without_disclosure = normalized.replace(ALLOWED_DISCLOSURE_LOWER, "") if remove_disclosure else normalized
+
+    for phrase in BANNED_KEYWORD_PHRASES:
+        if phrase and phrase in normalized_without_disclosure:
+            return phrase
+
+    for pattern in BANNED_REGEX_PATTERNS:
+        if re.search(pattern, normalized_without_disclosure, flags=re.IGNORECASE):
+            return pattern
+    return None
 
 
 def validate_caption(caption: str) -> tuple[bool, str]:
     if not caption or not caption.strip():
         return False, "empty caption"
-    if len(caption) < 120 or len(caption) > 1200:
-        return False, "caption length out of range"
-    if _contains_blocked(caption):
-        return False, "caption contains blocked phrase"
-    if any(p in caption.lower() for p in GENERIC_PHRASES):
-        return False, "caption too generic"
-
     if caption.count(DISCLOSURE) != 1:
         return False, "caption must include disclosure exactly once"
+
+    banned_match = _find_banned_match(caption, remove_disclosure=True)
+    if banned_match:
+        return False, f"caption contains banned compliance term: {banned_match}"
+
+    if len(caption) < 120 or len(caption) > 1200:
+        return False, "caption length out of range"
+
+    if any(p in caption.lower() for p in GENERIC_PHRASES):
+        return False, "caption too generic marketing language"
 
     hashtags = re.findall(r"#\w+", caption)
     if len(hashtags) > 5:
@@ -77,12 +106,24 @@ def validate_caption(caption: str) -> tuple[bool, str]:
 
 
 def validate_image_prompt(prompt: str) -> tuple[bool, str]:
-    if not prompt or len(prompt.strip()) < 80:
+    if not prompt or not prompt.strip():
         return False, "image prompt too short"
-    if _contains_blocked(prompt):
-        return False, "image prompt contains blocked phrase"
+
+    banned_match = _find_banned_match(prompt)
+    if banned_match:
+        return False, f"image prompt contains banned compliance term: {banned_match}"
+
+    if len(prompt.strip()) < 80:
+        return False, "image prompt too short"
 
     lowered = prompt.lower()
+    if any(term in lowered for term in ["money", "luxury", "lamborghini", "rolex", "mansion"]):
+        return False, "image prompt contains banned cash/luxury symbolism"
+    if any(term in lowered for term in ["pnl", "gains", "account balance", "balance screenshot", "fake return"]):
+        return False, "image prompt contains banned fake pnl/gains/account balance language"
+    if any(term in lowered for term in ["ticker", "buy", "sell", "recommendation", "stock pick"]):
+        return False, "image prompt contains banned readable ticker/recommendation language"
+
     has_scene = any(cue in lowered for cue in SCENE_CUES)
     has_style = any(cue in lowered for cue in STYLE_CUES)
     generic_hits = sum(1 for phrase in GENERIC_IMAGE_ONLY if phrase in lowered)
@@ -92,6 +133,6 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
     if not has_style:
         return False, "image prompt missing style/camera/mood cue"
     if generic_hits >= 2 and not (has_scene and has_style):
-        return False, "image prompt too generic"
+        return False, "image prompt too generic command center style"
 
     return True, "ok"

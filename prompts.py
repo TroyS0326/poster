@@ -48,13 +48,39 @@ VISUAL_DIRECTIONS = [
     "clean educational infographic style, no fake logos and no readable financial claims",
 ]
 
+COMPLIANCE_NEGATIVE_KEYWORDS = {
+    "claims_and_get_rich": [
+        "guaranteed", "guarantee", "profit", "profits", "profitable", "risk-free", "zero risk", "safe money",
+        "get rich", "easy income", "passive income", "make money", "cash", "wealth", "win rate", "high win rate",
+        "never lose", "sure thing", "certainty", "guaranteed returns", "guaranteed results", "income claim",
+        "financial freedom", "beat the market", "dominate the market", "profit machine",
+    ],
+    "regulatory_triggers": [
+        "investment advice", "personalized advice", "fiduciary", "fiduciary advice", "official recommendation",
+        "stock pick", "buy alert", "sell alert", "trade signal", "signals", "copy trading",
+    ],
+    "broker_platform_names": [
+        "alpaca", "td ameritrade", "robinhood", "interactive brokers", "e*trade", "charles schwab", "fidelity",
+        "webull", "tradestation", "coinbase", "binance", "kraken",
+    ],
+    "asset_classes_to_avoid": [
+        "crypto", "bitcoin", "btc", "ethereum", "eth", "forex", "fx", "options", "futures", "nft", "defi",
+    ],
+    "legacy_blocked_terms": [
+        "colormehighclub", "color me high club", "auto40", "auto420", "coloring", "stoner", "weed", "cannabis",
+    ],
+}
+
 TONE_RULES = [
     "Sounds like a real person talking to serious retail traders.",
     "Use concrete trading emotions: hesitation, boredom, revenge, fear, pressure, impulse, relief, patience.",
     "Avoid corporate filler: unlock potential, next level, revolutionize, game changer, seamless experience, cutting edge.",
     "Do not sound like a hype ad.",
-    "Do not claim XeanVI makes traders profitable.",
-    "Do not say or imply guaranteed outcomes.",
+    "Do not use broker names.",
+    "Do not mention crypto, bitcoin, forex, options, futures, NFTs, or DeFi.",
+    "Do not use the words profit, profits, profitable, cash, wealth, make money, win rate, guaranteed, guarantee, risk-free, safe money, get rich, passive income, or easy income.",
+    "Talk about process, discipline, validation, risk controls, execution rules, paper testing, playbook structure, and emotional control instead.",
+    "XeanVI is infrastructure/software, not financial advice, not investment advice, not a broker, and not a signal service.",
     "Do not recommend buying or selling any stock.",
     "Include exactly once: Not financial advice. Trading involves risk.",
     "Caption should have one strong emotional hook, one specific insight, one grounded XeanVI tie-in, one soft CTA.",
@@ -68,17 +94,25 @@ IMAGE_RULES = [
     "Avoid repeating the same dark command center dashboard every time.",
     "Use premium fintech or realistic editorial style.",
     "No logos, no fake broker screens, no fake profit screenshots, no dollar amounts, no luxury scam imagery, no stock tickers that look like recommendations.",
+    "Do not include broker logos or broker names.",
+    "Do not include crypto coins, bitcoin symbols, forex charts, options references, futures references, NFT references, or DeFi references.",
+    "Do not include cash/money/luxury symbolism.",
+    "Do not include fake PnL, fake gains, or fake account balances.",
+    "Do not include readable tickers or labels that look like recommendations.",
     "Prefer clean UI panels with abstract or blurred chart elements.",
     "Use vertical 1080x1350 social composition.",
 ]
 
-BLOCKED_PHRASES = [
-    "guaranteed profit", "risk-free", "win every trade", "make money overnight",
+BLOCKED_PHRASES = sorted({
+    phrase.lower()
+    for group in COMPLIANCE_NEGATIVE_KEYWORDS.values()
+    for phrase in group
+}.union({
+    "guaranteed profit", "win every trade", "make money overnight",
     "buy this stock", "sell this stock", "signals guaranteed",
-    "100% accurate", "passive income", "rich", "lamborghini", "cash pile", "rolex",
-    "mansion", "colormehighclub", "color me high club", "auto40", "auto420",
-    "coloring", "stoner", "weed", "cannabis", "#auto #post #niche"
-]
+    "100% accurate", "rich", "lamborghini", "cash pile", "rolex",
+    "mansion", "#auto #post #niche"
+}))
 
 SYSTEM_PROMPT = """You create social content packages for XeanVI, a trading discipline and execution platform.
 Return strict JSON only with exactly these fields and no extras:
@@ -97,6 +131,11 @@ Instructions:
 - Use the provided target visual direction as a creative anchor.
 - Create an original caption that is 300-850 characters and sounds human, specific, and grounded.
 - Include exactly once this sentence in the caption: Not financial advice. Trading involves risk.
+- XeanVI is infrastructure/software, not financial advice, not investment advice, not a broker, and not a signal service.
+- Do not use broker names.
+- Do not mention crypto, bitcoin, forex, options, futures, NFTs, or DeFi.
+- Do not use the words profit, profits, profitable, cash, wealth, make money, win rate, guaranteed, guarantee, risk-free, safe money, get rich, passive income, or easy income.
+- Talk about process, discipline, validation, risk controls, execution rules, paper testing, playbook structure, and emotional control.
 - Create an image_concept: one concise sentence describing the visual idea and emotional tone.
 - Create an image_prompt that visually matches the caption and chosen pillar.
 - Avoid repeating the same scene across generations; vary scene, angle, environment, lighting, and mood.

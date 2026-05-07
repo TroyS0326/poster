@@ -73,3 +73,9 @@ If you prefer local image generation, keep `IMAGE_PROVIDER=auto1111` and run Sta
 ## Quick syntax check
 Run:
 - `python -m py_compile *.py`
+
+## Compliance Keyword Guardrails
+- The bot rejects get-rich and income-claim language (for example guaranteed outcomes, easy income, passive income, and win-rate hype).
+- The bot avoids broker/platform names unless explicitly reviewed and legally approved.
+- The bot avoids crypto, forex, options, futures, NFT, and DeFi language for now.
+- XeanVI content should focus on infrastructure, discipline, risk controls, playbook validation, paper testing, execution rules, and emotional process control.
