@@ -31,7 +31,7 @@ def _fallback_packages() -> list[dict]:
         {
             "pillar": "Revenge trading after one bad loss",
             "archetype": "hard truth",
-            "caption": "One red trade can flip your brain from patient to reckless in seconds. That revenge click feels like control, but it is usually just pain wearing a strategy mask. XeanVI is built to force a pause: validate your setup, respect your risk bracket, then decide if the trade still makes sense. If your pulse is leading, step back before size goes up. Not financial advice. Trading involves risk. #XeanVI #TradingPsychology #RiskManagement",
+            "caption": "One red trade can flip your brain from patient to reckless in seconds. That revenge click feels like control, but it is usually just pain wearing a strategy mask. XeanVI is built to force a pause: validate your setup, respect your risk bracket, then decide if the trade still makes sense. If your pulse is leading, step back before risk size goes up. Not financial advice. Trading involves risk. #XeanVI #TradingPsychology #RiskManagement",
             "image_concept": "A tense pause moment before an emotional re-entry, emphasizing restraint over impulse.",
             "image_prompt": "Cinematic over-shoulder scene of a trader's hand hovering above mouse after a recent losing trade, risk checklist card in foreground, muted monitor glow, shallow depth of field, late afternoon desk environment, serious restrained mood, premium fintech editorial realism, abstract blurred charts only, vertical 1080x1350",
             "negative_prompt": "fake PnL, profit screenshots, broker logos, luxury lifestyle, money stacks, tickers, hype text, low detail, cartoon",
@@ -89,7 +89,7 @@ def _fallback_packages() -> list[dict]:
             "archetype": "mini story",
             "caption": "You spot the setup, everything aligns, then hesitation freezes your hand for five seconds too long. That sting is real, and repeating it can quietly erode confidence. XeanVI cannot remove emotion, but it can sharpen pre-trade clarity so execution is less ambiguous when the moment arrives. Confidence usually comes from process, not hype. Not financial advice. Trading involves risk. #Execution #TradingPsychology #XeanVI",
             "image_concept": "A high-tension pre-click moment where clarity and hesitation collide.",
-            "image_prompt": "Over-the-shoulder close shot of trader pausing before clicking buy/sell button (text unreadable), focus on tense hand posture, dim studio-like trading room with single monitor glow, moody cinematic lighting, emotionally charged but professional fintech realism, vertical 1080x1350",
+            "image_prompt": "Over-the-shoulder close shot of trader pausing before clicking execution button (text unreadable), focus on tense hand posture, dim studio-like trading room with single monitor glow, moody cinematic lighting, emotionally charged but professional fintech realism, vertical 1080x1350",
             "negative_prompt": "visible stock picks, giant gains, certainty slogans, logos, meme graphics, poor anatomy",
         },
     ]
