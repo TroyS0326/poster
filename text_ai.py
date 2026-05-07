@@ -73,7 +73,7 @@ def _fallback_packages() -> list[dict]:
             "archetype": "checklist",
             "caption": "Before entry, define the exit framework: stop, target, invalidation. Bracket structure is less about prediction and more about emotional containment once the position is live. XeanVI keeps those guardrails front and center so heat-of-the-moment edits are harder to justify. Rules are boring, and that is why they work. Not financial advice. Trading involves risk. #RiskControl #BracketOrders #XeanVI",
             "image_concept": "An abstract yet practical depiction of risk boundaries around a trade plan.",
-            "image_prompt": "Clean fintech interface concept with three labeled abstract zones for stop, target, invalidation, layered as guardrails around a central entry point, isometric camera angle, cool charcoal palette with subtle cyan accents, focused technical mood, no numbers or tickers, vertical 1080x1350",
+            "image_prompt": "Clean fintech interface concept with three labeled abstract zones for stop, target, invalidation, layered as guardrails around a central entry point, isometric camera angle, cool charcoal palette with subtle cyan accents, focused technical mood, no readable market-symbol labels or numeric performance displays, vertical 1080x1350",
             "negative_prompt": "price-prediction visuals, rocket emojis, fabricated account panels, brand marks, cluttered casino-like aesthetics",
         },
         {
