@@ -23,8 +23,8 @@ Python automation bot that every 4 hours: generates a XeanVI-compliant caption +
 Set `DRY_RUN=true` in `.env`. Bot will generate and log, but will not call Meta Graph posting endpoints.
 
 ## Env vars
-Required: `GEMINI_API_KEY`, `SD_API_URL`, `IMG_PUBLIC_URL_BASE`.
-Required when `DRY_RUN=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
+Required always: `GEMINI_API_KEY`, `SD_API_URL`, `IMG_PUBLIC_URL_BASE`.
+Required only when `DRY_RUN=false` and `MANUAL_REVIEW_MODE=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
 Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENERATION_ATTEMPTS=3`.
 
 `upload_image` behavior:
