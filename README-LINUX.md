@@ -51,6 +51,13 @@ Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENER
 ## Meta requirements
 Use a Facebook Page, linked Instagram Business account, and a long-lived Meta access token with permissions to publish page photos and Instagram content.
 
+
+## Content Quality System
+- Posts are generated from a rotating strategy of content pillars, post archetypes, and visual directions.
+- Captions are designed to sound human, emotionally grounded, and relevant to retail day trader psychology.
+- Images are intentionally varied and matched to each post theme instead of reusing one visual pattern.
+- Manual review mode is recommended while tuning quality and brand voice consistency.
+
 ## Compliance note
 Posts are marketing/educational only. Not financial advice. Trading involves risk.
 
