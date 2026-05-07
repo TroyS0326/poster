@@ -52,8 +52,9 @@ BANNED_REGEX_PATTERNS = [
 ]
 
 SCENE_CUES = [
-    "desk", "workstation", "journal", "notebook", "keyboard", "coffee", "monitor", "chair",
-    "lab", "sandbox", "studio", "office", "close-up", "over-shoulder", "split scene", "macro",
+    "desk", "workstation", "notebook", "keyboard", "coffee", "monitor", "chair",
+    "flat lay", "abstract", "interface", "dashboard cards", "rule-board", "process diagram",
+    "product ui", "mockup", "monitor glow", "empty desk",
 ]
 STYLE_CUES = [
     "cinematic", "editorial", "realistic", "isometric", "lighting", "mood", "depth of field",
@@ -61,6 +62,15 @@ STYLE_CUES = [
 ]
 GENERIC_IMAGE_ONLY = [
     "command center", "dashboard", "dark-mode", "dark mode", "ui panels", "fintech ui",
+]
+ANATOMY_RISK_TERMS = [
+    "hand", "hands", "finger", "fingers", "face", "person", "man", "woman", "body", "arm",
+    "holding", "over-the-shoulder", "portrait", "beard", "eyes",
+]
+BLOCKED_ANATOMY_PHRASES = ["paper held", "holding paper", "handwritten chart held", "person holding"]
+SAFE_VISUAL_CUES = [
+    "product ui", "mockup", "empty desk", "flat lay", "abstract", "interface", "dashboard cards",
+    "workstation", "notebook", "keyboard", "monitor glow", "rule-board", "process diagram",
 ]
 
 
@@ -101,15 +111,26 @@ def validate_caption(caption: str) -> tuple[bool, str]:
     if banned_match:
         return False, f"caption contains banned compliance term: {banned_match}"
 
-    if len(caption) < 120 or len(caption) > 1200:
-        return False, "caption length out of range"
+    words = re.findall(r"\b\w+[\w'-]*\b", caption)
+    if len(words) < 44 or len(words) > 85:
+        return False, "caption word count out of range"
 
     if any(p in caption.lower() for p in GENERIC_PHRASES):
         return False, "caption too generic marketing language"
 
     hashtags = re.findall(r"#\w+", caption)
-    if len(hashtags) > 5:
+    if len(hashtags) > 4:
         return False, "too many hashtags"
+
+    if "\n" not in caption:
+        return False, "caption must include line breaks"
+
+    for line in caption.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if len(stripped) > 220:
+            return False, "caption has overly long paragraph line"
 
     emojis = re.findall(r"[\U0001F300-\U0001FAFF]", caption)
     if len(emojis) > 1:
@@ -130,6 +151,15 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
         return False, "image prompt too short"
 
     lowered = prompt.lower()
+
+    if any(_phrase_matches(lowered, phrase) for phrase in BLOCKED_ANATOMY_PHRASES):
+        return False, "image prompt contains blocked anatomy phrase"
+
+    if "silhouette" in lowered and not ("no visible hands" in lowered and "no visible face" in lowered and "no visible limbs" in lowered):
+        return False, "silhouette usage must explicitly ban visible hands/face/limbs"
+
+    if any(_phrase_matches(lowered, term) for term in ANATOMY_RISK_TERMS):
+        return False, "image prompt contains anatomy-risk terms"
     if any(_phrase_matches(lowered, term) for term in ["money", "luxury", "lamborghini", "rolex", "mansion"]):
         return False, "image prompt contains banned cash/luxury symbolism"
     if any(_phrase_matches(lowered, term) for term in ["pnl", "gains", "account balance", "balance screenshot", "fake return"]):
@@ -138,11 +168,14 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
         return False, "image prompt contains banned readable ticker/recommendation language"
 
     has_scene = any(cue in lowered for cue in SCENE_CUES)
+    has_safe_visual = any(cue in lowered for cue in SAFE_VISUAL_CUES)
     has_style = any(cue in lowered for cue in STYLE_CUES)
     generic_hits = sum(1 for phrase in GENERIC_IMAGE_ONLY if phrase in lowered)
 
     if not has_scene:
         return False, "image prompt missing scene/environment cue"
+    if not has_safe_visual:
+        return False, "image prompt missing safe visual type cue"
     if not has_style:
         return False, "image prompt missing style/camera/mood cue"
     if generic_hits >= 2 and not (has_scene and has_style):

@@ -31,21 +31,21 @@ POST_ARCHETYPES = [
 ]
 
 VISUAL_DIRECTIONS = [
-    "early morning desk with trading journal, coffee, soft monitor glow",
-    "close-up of handwritten playbook rules beside a keyboard",
-    "tense trader pausing before clicking, cinematic over-shoulder",
-    "abstract risk-control system with bracket rails, clean fintech aesthetic",
-    "paper trading lab concept, sandbox testing environment, charts blurred",
-    "minimal dark UI rule-builder screen, no fake profit numbers",
-    "calm workstation after market close, notes and reflection",
-    "split scene: chaos/chasing vs discipline/playbook",
-    "AI scanner as subtle radar/map interface, not a profit machine",
-    "professional SaaS product mockup with cards for rules, risk, validation",
-    "empty chair, monitors glowing, system follows rules when emotions spike mood",
-    "tactical command board with risk limits, stop-loss, target zones, neutral numbers only",
-    "macro photo of keyboard, notebook, and simple rule card",
-    "founder build-in-public desk with code/editor and trading workflow diagrams",
-    "clean educational infographic style, no fake logos and no readable financial claims",
+    "premium product UI mockup on dark background, abstract charts blurred, no readable text",
+    "empty early-morning trading desk, journal closed, keyboard, coffee, no hands",
+    "close-up of notebook and keyboard only, no human body parts",
+    "abstract risk-control rails around a central decision point, no text",
+    "clean SaaS dashboard cards for rules, validation, and risk, no readable numbers",
+    "empty chair facing soft monitor glow, no person visible",
+    "split-screen concept: chaos vs discipline using abstract shapes, no people",
+    "tactical rule-board style graphic with abstract blocks, no readable tickers",
+    "premium editorial flat lay of keyboard, notebook, desk lamp, no hands",
+    "dark fintech hero graphic with XeanVI-inspired shapes, no logo unless real asset exists",
+    "abstract AI scanner/radar interface, no financial symbols",
+    "minimal compliance-safe infographic layout, no readable claims",
+    "product screenshot-style mockup with blurred placeholders only",
+    "cinematic workstation scene with no human visible",
+    "process diagram rendered as abstract boxes and paths, no readable text",
 ]
 
 COMPLIANCE_NEGATIVE_KEYWORDS = {
@@ -84,8 +84,13 @@ TONE_RULES = [
     "Do not recommend buying or selling any stock.",
     "Include exactly once: Not financial advice. Trading involves risk.",
     "Caption should have one strong emotional hook, one specific insight, one grounded XeanVI tie-in, one soft CTA.",
-    "Hashtags: 3 to 5 only.",
+    "Hashtags: 3 to 4 only.",
     "Emojis: 0 to 1 maximum, and usually none.",
+    "Write like a sharp Facebook/Instagram post, not a blog paragraph.",
+    "Use short lines and white space.",
+    "One idea per post.",
+    "No more than 4 hashtags.",
+    "50–75 words total.",
 ]
 
 IMAGE_RULES = [
@@ -100,6 +105,14 @@ IMAGE_RULES = [
     "Do not include fake PnL, fake gains, or fake account balances.",
     "Do not include readable tickers or labels that look like recommendations.",
     "Prefer clean UI panels with abstract or blurred chart elements.",
+    "For automated posts, avoid visible hands, fingers, faces, arms, full people, body parts, or people holding objects.",
+    "Prefer product UI, abstract editorial, empty desk, flat lay, silhouette-free scenes, and clean brand graphics.",
+    "If a human presence is needed, use only an out-of-focus silhouette with no visible hands, face, fingers, or limbs.",
+    "No generated readable text except very abstract UI blocks.",
+    "No handwritten papers with readable fake writing.",
+    "No floating papers held by people.",
+    "No anatomy-dependent scenes.",
+    "Negative guidance: detached limbs, malformed hands, extra fingers, disconnected body parts, distorted face, unreadable text, fake handwriting.",
     "Use vertical 1080x1350 social composition.",
 ]
 
@@ -129,7 +142,11 @@ Instructions:
 - Pick or follow the provided target pillar.
 - Pick or follow the provided target archetype.
 - Use the provided target visual direction as a creative anchor.
-- Create an original caption that is 300-850 characters and sounds human, specific, and grounded.
+- Caption must be 50-75 words total including disclosure and hashtags.
+- Format caption like a real social post with line breaks, not one long paragraph.
+- Use this exact flow: hook line (1 sentence), blank line, one specific insight or pain point (1-2 short sentences), blank line, grounded XeanVI tie-in or soft CTA (1 sentence), blank line, exact disclosure sentence, blank line, 3-4 hashtags max.
+- Use 0-1 emoji max.
+- Avoid filler, hype, corporate wording, motivational fluff, or story mode unless the selected archetype clearly needs it.
 - Include exactly once this sentence in the caption: Not financial advice. Trading involves risk.
 - XeanVI is infrastructure/software, not financial advice, not investment advice, not a broker, and not a signal service.
 - Do not use broker names.
