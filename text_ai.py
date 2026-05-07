@@ -56,8 +56,18 @@ def generate_content_package(config, logger):
         response = requests.post(gemini_url, headers=headers, json=payload, timeout=45)
         response.raise_for_status()
     except requests.RequestException as exc:
-        status = getattr(getattr(exc, "response", None), "status_code", "unknown")
-        logger.warning("gemini request failed (status=%s): %s; using fallback", status, exc)
+        error_response = getattr(exc, "response", None)
+        status = getattr(error_response, "status_code", "unknown")
+        error_body = ""
+        if error_response is not None:
+            try:
+                error_body = (error_response.text or "").strip()[:300]
+            except Exception:
+                error_body = ""
+        if error_body:
+            logger.warning("gemini request failed (status=%s): %s; using fallback", status, error_body)
+        else:
+            logger.warning("gemini request failed (status=%s): %s; using fallback", status, exc)
         return _fallback_package(pillar)
 
     try:

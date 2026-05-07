@@ -86,6 +86,9 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
                 headers=headers,
                 timeout=30,
             )
+            if poll_response.status_code in {401, 403}:
+                logger.error("replicate authentication failed; check REPLICATE_API_TOKEN")
+                return None
             poll_response.raise_for_status()
             prediction = poll_response.json()
             status = prediction.get("status")
