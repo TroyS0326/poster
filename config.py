@@ -63,15 +63,16 @@ def validate_required_config(config: Config) -> tuple[bool, list[str]]:
     missing = []
     if not config.gemini_api_key:
         missing.append("GEMINI_API_KEY")
-    if config.image_provider == "auto1111" and not config.sd_api_url:
-        missing.append("SD_API_URL")
+    if config.image_provider == "auto1111":
+        if not config.sd_api_url:
+            missing.append("SD_API_URL")
+        if not config.img_public_url_base:
+            missing.append("IMG_PUBLIC_URL_BASE")
     if config.image_provider == "replicate":
         if not config.replicate_api_token:
             missing.append("REPLICATE_API_TOKEN")
         if not config.replicate_model:
             missing.append("REPLICATE_MODEL")
-    if not config.img_public_url_base:
-        missing.append("IMG_PUBLIC_URL_BASE")
     if not config.dry_run and not config.manual_review_mode:
         if not config.meta_access_token:
             missing.append("META_ACCESS_TOKEN")

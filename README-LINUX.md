@@ -1,7 +1,7 @@
 # XeanVI Social Bot (Linux)
 
 ## What it does
-Python automation bot that every 4 hours: generates a XeanVI-compliant caption + image prompt, generates an AI image via Stable Diffusion API, builds a public image URL, and posts to Facebook Page + Instagram Business (or dry-run).
+Python automation bot that every 4 hours: generates a XeanVI-compliant caption + image prompt, generates an AI image, builds/uses a public image URL, and posts to Facebook Page + Instagram Business (or dry-run).
 
 ## Setup
 1. `python3 -m venv .venv && source .venv/bin/activate`
@@ -19,11 +19,13 @@ Set in `.env`:
 - `REPLICATE_MODEL=black-forest-labs/flux-schnell` (or another compatible Replicate model slug)
 
 With Replicate enabled, local Vast.ai/AUTOMATIC1111 Stable Diffusion WebUI is not required for image generation.
+With `IMAGE_PROVIDER=replicate`, Vast.ai `dashboard.py` public image hosting is not required for Meta posting.
+The bot uses Replicate's returned output URL for posting and also saves a local copy to `images/generated/`.
 
 ## Important config notes
 - `.env` is local-only and must never be committed.
 - Use `.env.example` as your template.
-- `IMG_PUBLIC_URL_BASE` must match how images are served.
+- `IMG_PUBLIC_URL_BASE` is only required when `IMAGE_PROVIDER=auto1111` (local image generation/hosting).
 - For local dashboard serving, example: `IMG_PUBLIC_URL_BASE=http://YOUR_PUBLIC_HOST:8080/images/generated/`
 - Meta cannot fetch localhost URLs. The image URL must be publicly reachable by Meta.
 - `DRY_RUN=true` is safest for first test.
@@ -33,9 +35,9 @@ With Replicate enabled, local Vast.ai/AUTOMATIC1111 Stable Diffusion WebUI is no
 Set `DRY_RUN=true` in `.env`. Bot will generate and log, but will not call Meta Graph posting endpoints.
 
 ## Env vars
-Required always: `GEMINI_API_KEY`, `IMG_PUBLIC_URL_BASE`.
-When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` is required.
-When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required.
+Required always: `GEMINI_API_KEY`.
+When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` and `IMG_PUBLIC_URL_BASE` are required.
+When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required (`IMG_PUBLIC_URL_BASE` is optional).
 Required only when `DRY_RUN=false` and `MANUAL_REVIEW_MODE=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
 Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENERATION_ATTEMPTS=3`.
 
