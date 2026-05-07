@@ -61,7 +61,7 @@ def validate_required_config(config: Config) -> tuple[bool, list[str]]:
         missing.append("SD_API_URL")
     if not config.img_public_url_base:
         missing.append("IMG_PUBLIC_URL_BASE")
-    if not config.dry_run:
+    if not config.dry_run and not config.manual_review_mode:
         if not config.meta_access_token:
             missing.append("META_ACCESS_TOKEN")
         if not config.fb_page_id:
