@@ -2,11 +2,17 @@ import re
 from prompts import BLOCKED_PHRASES
 
 GENERIC_PHRASES = ["unlock your potential", "take your trading to the next level", "ai trading bot makes money"]
+UNSAFE_FINANCIAL_PATTERNS = [
+    r"\bthis is financial advice\b",
+    r"\bfinancial advice guaranteed\b",
+]
 
 
 def _contains_blocked(text: str) -> bool:
     lowered = text.lower()
-    return any(p in lowered for p in BLOCKED_PHRASES)
+    if any(p in lowered for p in BLOCKED_PHRASES):
+        return True
+    return any(re.search(pattern, lowered) for pattern in UNSAFE_FINANCIAL_PATTERNS)
 
 
 def validate_caption(caption: str) -> tuple[bool, str]:

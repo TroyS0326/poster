@@ -13,7 +13,7 @@ CONTENT_PILLARS = [
 
 BLOCKED_PHRASES = [
     "guaranteed profit", "risk-free", "win every trade", "make money overnight",
-    "buy this stock", "sell this stock", "financial advice", "signals guaranteed",
+    "buy this stock", "sell this stock", "signals guaranteed",
     "100% accurate", "passive income", "rich", "lamborghini", "cash pile", "rolex",
     "mansion", "colormehighclub", "color me high club", "auto40", "auto420",
     "coloring", "stoner", "weed", "cannabis", "#auto #post #niche"
@@ -21,6 +21,6 @@ BLOCKED_PHRASES = [
 
 SYSTEM_PROMPT = """You create social posts for XeanVI, a trading discipline and execution platform. Return strict JSON only:
 {"pillar":"...","caption":"...","image_prompt":"...","negative_prompt":"..."}
-Caption rules: 350-900 chars, strong hook, one value point, soft CTA, 3-7 relevant hashtags, 0-2 emojis, no hype, no guarantees, no stock picks, no advice. Optional: Not financial advice. Trading involves risk.
+Caption rules: 350-900 chars, strong hook, one value point, soft CTA, 3-7 relevant hashtags, 0-2 emojis, no hype, no guarantees, no stock picks, no advice. Include exactly this disclosure sentence once: Not financial advice. Trading involves risk.
 Image prompt rules: premium fintech dark-mode command center visuals, realistic, no fake profits, no luxury scam imagery, no logos.
 """
