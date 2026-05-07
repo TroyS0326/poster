@@ -82,14 +82,14 @@ BLOCKED_PHRASES = [
 
 SYSTEM_PROMPT = """You create social content packages for XeanVI, a trading discipline and execution platform.
 Return strict JSON only with exactly these fields and no extras:
-{
+{{
   "pillar": "...",
   "archetype": "...",
   "caption": "...",
   "image_concept": "...",
   "image_prompt": "...",
   "negative_prompt": "..."
-}
+}}
 
 Instructions:
 - Pick or follow the provided target pillar.
