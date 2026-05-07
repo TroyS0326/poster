@@ -79,3 +79,8 @@ Run:
 - The bot avoids broker/platform names unless explicitly reviewed and legally approved.
 - The bot avoids crypto, forex, options, futures, NFT, and DeFi language for now.
 - XeanVI content should focus on infrastructure, discipline, risk controls, playbook validation, paper testing, execution rules, and emotional process control.
+
+## Automated Image Quality Rules
+- Automated posts avoid hands, faces, people, and visible anatomy because fast image models can distort body details and reduce production quality.
+- For reliable premium output, prefer product UI mockups, empty desk workstation scenes, abstract risk-control visuals, and clean fintech graphics.
+- Premium human/editorial images should be generated manually and reviewed before publishing.
