@@ -8,20 +8,24 @@ def _graph_url(version: str, path: str) -> str:
 def _safe_post(url: str, data: dict, logger):
     try:
         response = requests.post(url, data=data, timeout=45)
-        response.raise_for_status()
     except requests.RequestException as exc:
         logger.warning("meta request failed for %s: %s", url, exc)
-        return None, {"status": "failed", "error": str(exc)}
+        return None, {"status": "failed", "response": {"error": str(exc)}, "status_code": None}
 
     try:
         body = response.json()
     except ValueError as exc:
         logger.warning("meta non-json response for %s: %s", url, exc)
-        return response, {"status": "failed", "error": "non_json_response"}
+        body = response.text
 
-    if body.get("error"):
-        return response, {"status": "failed", "response": body}
-    return response, {"status": "success", "response": body}
+    if not response.ok:
+        logger.warning("meta request failed for %s with status %s: %s", url, response.status_code, body)
+        return response, {"status": "failed", "response": body, "status_code": response.status_code}
+
+    if isinstance(body, dict) and body.get("error"):
+        logger.warning("meta request returned error for %s: %s", url, body.get("error"))
+        return response, {"status": "failed", "response": body, "status_code": response.status_code}
+    return response, {"status": "success", "response": body, "status_code": response.status_code}
 
 
 def post_to_meta(caption: str, image_url: str, config, logger):

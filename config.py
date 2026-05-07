@@ -9,6 +9,7 @@ class Config:
     sd_api_url: str
     replicate_api_token: str
     replicate_model: str
+    replicate_output_format: str
     meta_access_token: str
     fb_page_id: str
     ig_business_id: str
@@ -41,6 +42,7 @@ def load_config() -> Config:
         sd_api_url=os.getenv("SD_API_URL", "http://127.0.0.1:7860"),
         replicate_api_token=os.getenv("REPLICATE_API_TOKEN", ""),
         replicate_model=os.getenv("REPLICATE_MODEL", "black-forest-labs/flux-schnell"),
+        replicate_output_format=os.getenv("REPLICATE_OUTPUT_FORMAT", "jpg").strip().lower() or "jpg",
         meta_access_token=os.getenv("META_ACCESS_TOKEN", ""),
         fb_page_id=os.getenv("FB_PAGE_ID", ""),
         ig_business_id=os.getenv("IG_BUSINESS_ID", ""),
