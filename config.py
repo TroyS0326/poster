@@ -14,6 +14,7 @@ class Config:
     ig_business_id: str
     img_public_url_base: str
     gemini_api_key: str
+    gemini_model: str
     openai_api_key: str
     meta_graph_version: str
     post_interval_hours: int
@@ -45,6 +46,7 @@ def load_config() -> Config:
         ig_business_id=os.getenv("IG_BUSINESS_ID", ""),
         img_public_url_base=os.getenv("IMG_PUBLIC_URL_BASE", ""),
         gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         meta_graph_version=os.getenv("META_GRAPH_VERSION", "v20.0"),
         post_interval_hours=int(os.getenv("POST_INTERVAL_HOURS", "4")),

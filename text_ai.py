@@ -3,8 +3,6 @@ import random
 import requests
 from prompts import CONTENT_PILLARS, SYSTEM_PROMPT
 
-
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 REQUIRED_PACKAGE_FIELDS = ["pillar", "caption", "image_prompt", "negative_prompt"]
 
 
@@ -50,14 +48,16 @@ def generate_content_package(config, logger):
     pillar = random.choice(CONTENT_PILLARS)
     logger.info("content pillar selected: %s", pillar)
     prompt = f"{SYSTEM_PROMPT}\nTarget pillar: {pillar}"
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{config.gemini_model}:generateContent"
     headers = {"Content-Type": "application/json", "X-goog-api-key": config.gemini_api_key}
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
     try:
-        response = requests.post(GEMINI_URL, headers=headers, json=payload, timeout=45)
+        response = requests.post(gemini_url, headers=headers, json=payload, timeout=45)
         response.raise_for_status()
     except requests.RequestException as exc:
-        logger.warning("gemini request failed: %s; using fallback", exc)
+        status = getattr(getattr(exc, "response", None), "status_code", "unknown")
+        logger.warning("gemini request failed (status=%s): %s; using fallback", status, exc)
         return _fallback_package(pillar)
 
     try:
