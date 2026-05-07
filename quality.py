@@ -64,12 +64,25 @@ GENERIC_IMAGE_ONLY = [
 ]
 
 
+def _phrase_matches(text: str, phrase: str) -> bool:
+    if not phrase:
+        return False
+
+    tokens = [re.escape(part) for part in phrase.strip().split() if part]
+    if not tokens:
+        return False
+
+    phrase_pattern = r"\s+".join(tokens)
+    pattern = rf"(?<![a-z0-9]){phrase_pattern}(?![a-z0-9])"
+    return re.search(pattern, text, flags=re.IGNORECASE) is not None
+
+
 def _find_banned_match(text: str, remove_disclosure: bool = False) -> str | None:
     normalized = text.lower()
     normalized_without_disclosure = normalized.replace(ALLOWED_DISCLOSURE_LOWER, "") if remove_disclosure else normalized
 
     for phrase in BANNED_KEYWORD_PHRASES:
-        if phrase and phrase in normalized_without_disclosure:
+        if _phrase_matches(normalized_without_disclosure, phrase):
             return phrase
 
     for pattern in BANNED_REGEX_PATTERNS:
@@ -117,11 +130,11 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
         return False, "image prompt too short"
 
     lowered = prompt.lower()
-    if any(term in lowered for term in ["money", "luxury", "lamborghini", "rolex", "mansion"]):
+    if any(_phrase_matches(lowered, term) for term in ["money", "luxury", "lamborghini", "rolex", "mansion"]):
         return False, "image prompt contains banned cash/luxury symbolism"
-    if any(term in lowered for term in ["pnl", "gains", "account balance", "balance screenshot", "fake return"]):
+    if any(_phrase_matches(lowered, term) for term in ["pnl", "gains", "account balance", "balance screenshot", "fake return"]):
         return False, "image prompt contains banned fake pnl/gains/account balance language"
-    if any(term in lowered for term in ["ticker", "buy", "sell", "recommendation", "stock pick"]):
+    if any(_phrase_matches(lowered, term) for term in ["ticker", "buy", "sell", "recommendation", "stock pick"]):
         return False, "image prompt contains banned readable ticker/recommendation language"
 
     has_scene = any(cue in lowered for cue in SCENE_CUES)
