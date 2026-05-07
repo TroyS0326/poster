@@ -81,7 +81,7 @@ def _fallback_packages() -> list[dict]:
             "archetype": "trader mistake breakdown",
             "caption": "Boredom can quietly break discipline faster than volatility.\n\nWhen activity slows, forcing low-quality actions feels productive but usually weakens rule adherence. A clear participation filter protects attention and keeps your process selective.\n\nXeanVI helps enforce patience by requiring criteria before execution can move forward.\n\nNot financial advice. Trading involves risk.\n\n#XeanVI #Overtrading #TradingDiscipline #RiskManagement",
             "image_concept": "A split concept visual showing noisy impulse versus structured restraint.",
-            "image_prompt": "Split-screen concept showing chaos versus discipline using abstract shapes only, one side noisy scattered signals and the other side clean structured UI blocks, premium fintech editorial lighting, object-only composition, vertical 1080x1350",
+            "image_prompt": "Split-screen concept showing chaos versus discipline using abstract shapes only, one side noisy scattered visual noise and the other side clean structured UI blocks, premium fintech editorial lighting, object-only composition, vertical 1080x1350",
             "negative_prompt": "hands, fingers, face, person, people, human, humans, body parts, arm, holding, over-the-shoulder, portrait, beard, eyes, detached limbs, malformed anatomy, readable claims",
         },
         {

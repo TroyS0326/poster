@@ -171,7 +171,7 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
     if any(_phrase_matches(lowered, phrase) for phrase in BLOCKED_ANATOMY_PHRASES):
         return False, "image prompt contains blocked anatomy phrase"
 
-    if "silhouette" in lowered and not ("no visible hands" in lowered and "no visible face" in lowered and "no visible limbs" in lowered):
+    if "silhouette" in lowered and "silhouette-free" not in lowered and "silhouette free" not in lowered and not ("no visible hands" in lowered and "no visible face" in lowered and "no visible limbs" in lowered):
         return False, "silhouette usage must explicitly ban visible hands/face/limbs"
 
     anatomy_scan_text = _remove_safe_negated_anatomy_phrases(lowered)
