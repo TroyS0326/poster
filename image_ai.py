@@ -111,6 +111,7 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
             "filename": filename,
             "image_prompt": image_prompt,
             "model_name": config.replicate_model,
+            "remote_url": image_url,
         }
     except Exception as exc:
         logger.error("replicate image generation failed: %s", exc)
