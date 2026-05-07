@@ -1,64 +1,53 @@
-import requests
-import random
 import json
+import random
+import requests
+from prompts import CONTENT_PILLARS, SYSTEM_PROMPT
 
 
-def _build_prompt(topic):
-    return (
-        "Write a short, engaging Facebook caption for a brand called XeanVI. "
-        f"The topic is {topic}. "
-        "Rules: "
-        "1. Keep it under 200 characters total. "
-        "2. Sound natural and professional. "
-        "3. Include exactly 3 trending hashtags at the end. "
-        "4. Do not use emojis unless they perfectly fit the tone. "
-        "5. Output ONLY the caption and hashtags, no conversational filler."
-    )
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 
-def _call_gemini(url, headers, prompt):
-    data = {"contents": [{"parts": [{"text": prompt}]}]}
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    if response.status_code != 200:
-        return None
-
+def _extract_json(text: str) -> dict | None:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        text = text.replace("json", "", 1).strip()
     try:
-        return response.json()["candidates"][0]["content"]["parts"][0]["text"].strip().replace("\n", " ")
-    except (KeyError, IndexError):
-        return None
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(text[start:end + 1])
+            except json.JSONDecodeError:
+                return None
+    return None
 
 
-def generate_caption(config):
-    api_key = config['GEMINI_API_KEY']
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+def generate_content_package(config, logger):
+    pillar = random.choice(CONTENT_PILLARS)
+    logger.info("content pillar selected: %s", pillar)
+    prompt = f"{SYSTEM_PROMPT}\nTarget pillar: {pillar}"
+    headers = {"Content-Type": "application/json", "X-goog-api-key": config.gemini_api_key}
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-    topics = [
-        "new collection drop",
-        "premium quality and craftsmanship",
-        "streetwear confidence and style",
-        "limited release announcement",
-    ]
-    prompt = _build_prompt(random.choice(topics))
+    response = requests.post(GEMINI_URL, headers=headers, json=payload, timeout=45)
+    response.raise_for_status()
+    text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    parsed = _extract_json(text)
+    if parsed:
+        return parsed
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-goog-api-key": api_key
+    logger.warning("gemini json parse failed, using safe fallback")
+    return {
+        "pillar": pillar,
+        "caption": (
+            "Discipline is a process, not a mood. XeanVI helps retail day traders execute rule-based playbooks "
+            "with automated validation and bracket-order risk controls so decisions stay structured under pressure. "
+            "Build the playbook before you take the trade. Not financial advice. Trading involves risk. "
+            "#XeanVI #TradingDiscipline #DayTrading #RiskManagement"
+        ),
+        "image_prompt": "Premium dark-mode trading command center UI, AI market scanner panels, disciplined trader workstation, electric blue and charcoal palette, clean SaaS fintech aesthetic, realistic lighting, 1080x1350 vertical composition",
+        "negative_prompt": "blurry, deformed text, fake logos, luxury lifestyle, cash piles, fake profit screenshots, childish cartoon style, low quality, distorted UI",
     }
-    text = _call_gemini(url, headers, prompt)
-
-    if text and len(text) <= 200:
-        return text
-
-    correction_prompt = (
-        "Rewrite this caption so it is under 200 characters total and ends with exactly 3 hashtags. "
-        "Output only the corrected caption:\n"
-        f"{text or ''}"
-    )
-    corrected = _call_gemini(url, headers, correction_prompt)
-    if corrected and len(corrected) <= 200:
-        return corrected
-
-    if text:
-        return text[:200]
-
-    return "#xeanvi #fashion #style"

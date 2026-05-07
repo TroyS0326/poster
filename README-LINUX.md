@@ -1,75 +1,31 @@
-# 🧠 auto40 Script Suite - Linux (Ubuntu) Setup Guide
+# XeanVI Social Bot (Linux)
 
-Follow this guide to install and run the `auto40` scripts on **Ubuntu or Linux**. Super beginner-friendly!
+## What it does
+Python automation bot that every 4 hours: generates a XeanVI-compliant caption + image prompt, generates an AI image via Stable Diffusion API, builds a public image URL, and posts to Facebook Page + Instagram Business (or dry-run).
 
----
+## Setup
+1. `python3 -m venv .venv && source .venv/bin/activate`
+2. `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and fill values.
+4. Optional local image hosting: `python dashboard.py`
+5. Run bot: `python main.py`
 
-## ✅ Minimum System Requirements
+## Dry-run mode
+Set `DRY_RUN=true` in `.env`. Bot will generate and log, but will not call Meta Graph posting endpoints.
 
-- Ubuntu 20.04 or later
-- CPU: Intel i5 / Ryzen 5 or better
-- RAM: 8 GB minimum (16 GB recommended)
-- GPU: NVIDIA GTX 1660 or better
-- Python 3.10 or later
-- 5+ GB free space
+## Env vars
+Required: `GEMINI_API_KEY`, `SD_API_URL`, `IMG_PUBLIC_URL_BASE`.
+Required when `DRY_RUN=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
+Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENERATION_ATTEMPTS=3`.
 
----
+## Meta requirements
+Use a Facebook Page, linked Instagram Business account, and a long-lived Meta access token with permissions to publish page photos and Instagram content.
 
-## 📦 Step-by-Step Instructions
+## Compliance note
+Posts are marketing/educational only. Not financial advice. Trading involves risk.
 
-### 1. Install Python & Pip
-
-```bash
-sudo apt update
-sudo apt install python3 python3-pip -y
-```
-
-### 2. Install unzip if needed
-
-```bash
-sudo apt install unzip -y
-```
-
-### 3. Extract Project Files
-
-```bash
-unzip auto40.zip
-cd auto40/auto40
-```
-
-### 4. Install Required Python Libraries
-
-```bash
-pip3 install -r requirements.txt
-```
-
-### 5. Configure `.env`
-
-```bash
-nano .env
-```
-
-- Add your keys and configuration
-- Save with `CTRL+O`, exit with `CTRL+X`
-
-### 6. Run the Script
-
-```bash
-python3 main.py
-```
-
----
-
-## ✅ Script Summary
-
-| Script         | What It Does                                          |
-|----------------|-------------------------------------------------------|
-| `main.py`      | Starts the full process: caption + image + post      |
-| `text_ai.py`   | Generates captions using AI                          |
-| `image_ai.py`  | Creates AI-generated images                          |
-| `meta_poster.py`| Posts to Instagram/Facebook                         |
-| `uploader.py`  | Uploads image assets                                 |
-| `scheduler.py` | Schedules auto-posting                               |
-| `dashboard.py` | Optional interface (GUI)                             |
-| `config.py`    | Holds default settings                               |
-| `.env`         | Stores your keys and secrets                         |
+## Troubleshooting
+- Missing config -> bot exits with explicit missing env names.
+- Gemini JSON malformed -> safe JSON extraction + fallback package.
+- SD API failure -> post skipped safely.
+- FB success + IG fail -> both statuses logged independently.

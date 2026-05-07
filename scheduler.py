@@ -1,48 +1,45 @@
-from apscheduler.schedulers.blocking import BlockingScheduler
-from text_ai import generate_caption
+import random
+import time
+from quality import validate_caption, validate_image_prompt
+from text_ai import generate_content_package
 from image_ai import generate_image
 from uploader import upload_image
 from meta_poster import post_to_meta
 
 
-def job(config):
-    print("🚀 Starting XeanVI post workflow...")
-    caption = generate_caption(config)
-    print("✍️  Generated caption:", caption)
+def run_workflow(config, logger):
+    logger.info("workflow started")
+    for attempt in range(1, config.max_generation_attempts + 1):
+        package = generate_content_package(config, logger)
+        logger.info("caption generated")
+        cap_ok, cap_reason = validate_caption(package["caption"])
+        prm_ok, prm_reason = validate_image_prompt(package["image_prompt"])
+        logger.info("caption quality %s (%s)", "passed" if cap_ok else "failed", cap_reason)
+        logger.info("image prompt quality %s (%s)", "passed" if prm_ok else "failed", prm_reason)
+        if cap_ok and prm_ok:
+            break
+        if attempt == config.max_generation_attempts:
+            logger.error("quality failed after %s attempts, skipping post", attempt)
+            return
 
-    img_path, img_url, prompt, model_choice = generate_image(config)
-    if not img_path:
-        print("❌ Image generation failed. Aborting post.")
+    logger.info("image prompt generated")
+    image_result = generate_image(config, package["image_prompt"], package.get("negative_prompt", ""), logger)
+    if not image_result:
         return
-
-    print("🖼️  Generated image at:", img_path)
-    hosted_url = upload_image(img_path, config)
-    print("🌐 Hosted image URL:", hosted_url)
-    result = post_to_meta(caption, hosted_url, config)
-    print(f"✅ Posted! Result: {result}")
-
-
-def _get_schedule_times(config):
-    # Comma-separated "HH:MM" values, e.g. "09:00,13:30,18:00"
-    raw_times = config.get("DAILY_POST_TIMES", "09:00")
-    parsed = []
-    for value in raw_times.split(","):
-        value = value.strip()
-        if not value:
-            continue
-        hour, minute = value.split(":")
-        parsed.append((int(hour), int(minute)))
-    return parsed or [(9, 0)]
+    logger.info("image generated: %s", image_result["local_path"])
+    hosted_url = upload_image(image_result["local_path"], config)
+    logger.info("hosted/public image URL created: %s", hosted_url)
+    result = post_to_meta(package["caption"], hosted_url, config, logger)
+    logger.info("Facebook posted or failed: %s", result["facebook"]["status"])
+    logger.info("Instagram container created/published or failed: %s", result["instagram"]["status"])
 
 
-def schedule_posts(config):
-    timezone = config.get("SCHEDULER_TIMEZONE", "UTC")
-    scheduler = BlockingScheduler(timezone=timezone)
-    times = _get_schedule_times(config)
-
-    for hour, minute in times:
-        scheduler.add_job(job, "cron", hour=hour, minute=minute, args=[config])
-        print(f"🗓️  Scheduled post for {hour:02d}:{minute:02d} ({timezone})")
-
-    print("⏰ XeanVI Daily Scheduler started. Press Ctrl+C to exit.")
-    scheduler.start()
+def schedule_posts(config, logger):
+    interval = max(1, config.post_interval_hours)
+    logger.info("scheduler started; posting every %s hour(s)", interval)
+    while True:
+        run_workflow(config, logger)
+        jitter = random.randint(0, max(0, config.randomize_interval_minutes))
+        sleep_seconds = (interval * 3600) + (jitter * 60)
+        logger.info("sleep time: %s seconds", sleep_seconds)
+        time.sleep(sleep_seconds)
