@@ -9,11 +9,29 @@ DEFAULT_AUDIENCE = "retail day traders"
 DEFAULT_TONE = "direct"
 DEFAULT_DURATION_SECONDS = 18
 DEFAULT_SCENE_COUNT = 4
+DEFAULT_TEMPLATE = "discipline"
+DEFAULT_BRAND = "generic"
+
+SUPPORTED_TEMPLATES = {"discipline", "mistake", "checklist", "myth", "before-after"}
+SUPPORTED_BRANDS = {"generic", "xeanvi"}
 
 TONE_STYLES = {
     "direct": "Keep it simple and rule-based.",
     "calm": "Slow down and follow your process.",
     "coach": "Train the habit, not the hype.",
+}
+
+BRAND_PACKS = {
+    "generic": {
+        "default_audience": "retail traders",
+        "default_cta": "Save this and review your rules before your next session.",
+        "background": {"solid": "#101820", "gradient_start": "#101820", "gradient_end": "#1f4068"},
+    },
+    "xeanvi": {
+        "default_audience": "active traders building rule-based execution",
+        "default_cta": "Save this and tighten your trading playbook in your command center.",
+        "background": {"solid": "#0d1321", "gradient_start": "#0d1321", "gradient_end": "#1d2d50"},
+    },
 }
 
 
@@ -23,6 +41,8 @@ def _validate_inputs(
     scene_count: int,
     background_type: str,
     output: Path,
+    template: str = DEFAULT_TEMPLATE,
+    brand: str = DEFAULT_BRAND,
 ) -> None:
     if not topic or not topic.strip():
         raise ValueError("topic must not be empty")
@@ -32,34 +52,51 @@ def _validate_inputs(
         raise ValueError("duration_seconds is too short for the requested scene_count")
     if background_type not in {"solid", "gradient"}:
         raise ValueError("background_type must be one of: solid, gradient")
+    if template not in SUPPORTED_TEMPLATES:
+        raise ValueError(f"unsupported template: {template}")
+    if brand not in SUPPORTED_BRANDS:
+        raise ValueError(f"unsupported brand: {brand}")
     if output.suffix.lower() != ".json":
         raise ValueError("output path must end with .json")
 
 
-def _build_scene_texts(topic: str, audience: str, tone: str, call_to_action: str, scene_count: int) -> list[str]:
+def _template_lines(template: str, topic: str, audience: str, cta: str, brand: str) -> list[str]:
     hook = f"{audience.title()}: {topic.strip()}"
-    problem = "Most traders break rules under pressure, then call it strategy."
-    insight = "Build a playbook, paper test it, and follow risk limits before emotion takes over."
-    cta = call_to_action.strip() or "Save this and review your rules before your next session."
+    if brand == "xeanvi":
+        safe_process = "Use a trading playbook, paper test it, and enforce risk controls before execution."
+    else:
+        safe_process = "Use a repeatable plan, test it, and enforce risk controls before execution."
 
-    if scene_count == 2:
-        return [hook, f"{insight} {cta}"]
+    if template == "discipline":
+        return [hook, "Most traders break rules under pressure.", safe_process, cta]
+    if template == "mistake":
+        return [f"Mistake: {topic.strip()}", "It hurts consistency and adds emotional trades.", "Use scanning, validation, and rule-based execution instead.", cta]
+    if template == "checklist":
+        return [hook, "Checklist 1: Define entry, stop, and invalidation.", "Checklist 2: Validate setup conditions before action.", f"Checklist 3: Log execution quality. {cta}"]
+    if template == "myth":
+        return [f"Myth: {topic.strip()}", "This framing ignores risk and process quality.", "Better framing: outcomes follow disciplined execution over time.", cta]
+    return ["Before: Emotional, impulsive entries.", "After: Rule-based entries with validation.", "What changes: cleaner risk controls and better execution quality.", cta]
 
-    if scene_count == 3:
-        return [hook, problem, f"{insight} {cta}"]
 
-    scenes = [hook, problem]
-    middle_count = scene_count - 3
-    middle_lines = [
-        insight,
-        "Discipline is execution quality, not motivation.",
-        "Risk controls and emotional control protect your edge.",
-        TONE_STYLES.get(tone, TONE_STYLES["direct"]),
+def _fit_lines_to_scene_count(lines: list[str], scene_count: int) -> list[str]:
+    if scene_count == len(lines):
+        return lines
+    if scene_count < len(lines):
+        result = lines[: scene_count - 1]
+        result.append(" ".join(lines[scene_count - 1 :]))
+        return result
+
+    result = lines[:-1]
+    filler = [
+        "Execution quality beats emotional reaction.",
+        "Track decisions and refine your process.",
+        "Risk controls protect long-term consistency.",
+        "Discipline scales better than motivation.",
     ]
-    for idx in range(middle_count):
-        scenes.append(middle_lines[idx % len(middle_lines)])
-    scenes.append(cta)
-    return scenes
+    while len(result) < scene_count - 1:
+        result.append(filler[(len(result) - (len(lines) - 1)) % len(filler)])
+    result.append(lines[-1])
+    return result
 
 
 def _allocate_scene_durations(duration_seconds: int, scene_count: int) -> list[float]:
@@ -86,18 +123,26 @@ def generate_storyboard(
     duration_seconds: int = DEFAULT_DURATION_SECONDS,
     scene_count: int = DEFAULT_SCENE_COUNT,
     background_type: str = "gradient",
+    template: str = DEFAULT_TEMPLATE,
+    brand: str = DEFAULT_BRAND,
 ) -> dict:
-    _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"))
+    _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand)
+
+    pack = BRAND_PACKS[brand]
+    audience = audience or pack["default_audience"]
+    call_to_action = call_to_action.strip() or pack["default_cta"]
 
     title = f"{topic.strip()}"
-    scene_texts = _build_scene_texts(topic, audience, tone, call_to_action, scene_count)
+    template_lines = _template_lines(template, topic, audience, call_to_action, brand)
+    scene_texts = _fit_lines_to_scene_count(template_lines, scene_count)
     durations = _allocate_scene_durations(duration_seconds, scene_count)
     scenes = [{"text": text, "duration": duration} for text, duration in zip(scene_texts, durations)]
 
-    background = {"type": background_type, "color": "#101820", "color_end": "#1f4068"}
+    bg = pack["background"]
+    background = {"type": background_type, "color": bg["gradient_start"], "color_end": bg["gradient_end"]}
     if background_type == "solid":
-        background["color"] = "#101820"
-        background["color_end"] = "#101820"
+        background["color"] = bg["solid"]
+        background["color_end"] = bg["solid"]
 
     return {
         "title": title,
@@ -119,12 +164,14 @@ def main() -> int:
     parser.add_argument("--duration-seconds", type=int, default=DEFAULT_DURATION_SECONDS)
     parser.add_argument("--scene-count", type=int, default=DEFAULT_SCENE_COUNT)
     parser.add_argument("--background-type", default="gradient", help="solid or gradient")
+    parser.add_argument("--template", default=DEFAULT_TEMPLATE, choices=sorted(SUPPORTED_TEMPLATES))
+    parser.add_argument("--brand", default=DEFAULT_BRAND, choices=sorted(SUPPORTED_BRANDS))
     parser.add_argument("--output", required=True, help="Output JSON path")
     args = parser.parse_args()
 
     output = Path(args.output)
     try:
-        _validate_inputs(args.topic, args.duration_seconds, args.scene_count, args.background_type, output)
+        _validate_inputs(args.topic, args.duration_seconds, args.scene_count, args.background_type, output, args.template, args.brand)
 
         ai_provider = os.getenv("REELS_STORYBOARD_AI_PROVIDER", "").strip()
         if ai_provider:
@@ -137,6 +184,8 @@ def main() -> int:
                 duration_seconds=args.duration_seconds,
                 scene_count=args.scene_count,
                 background_type=args.background_type,
+                template=args.template,
+                brand=args.brand,
             )
         else:
             storyboard = generate_storyboard(
@@ -147,6 +196,8 @@ def main() -> int:
                 duration_seconds=args.duration_seconds,
                 scene_count=args.scene_count,
                 background_type=args.background_type,
+                template=args.template,
+                brand=args.brand,
             )
 
         output.parent.mkdir(parents=True, exist_ok=True)

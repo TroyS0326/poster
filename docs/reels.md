@@ -59,7 +59,18 @@ Useful options:
 - `--duration-seconds` (default: `18`)
 - `--scene-count` (default: `4`)
 - `--background-type` (`solid` or `gradient`)
+- `--template` (`discipline`, `mistake`, `checklist`, `myth`, `before-after`; default `discipline`)
+- `--brand` (`generic`, `xeanvi`; default `generic`)
 
-Template structure is reliable and concise: Hook → Problem → Reframe/Insight → CTA.
+Template structures stay concise for vertical overlays and adapt to scene count.
+
+Brand packs set defaults for audience/CTA vocabulary and visual palette, while keeping compliance-safe wording (no guaranteed outcomes, income claims, or "signals that win" style language).
+
+Example with brand + template:
+
+```bash
+python -m reels.storyboard --brand xeanvi --template mistake --topic "The cost of breaking your own trading rules" --output outputs/xeanvi_mistake.json
+python -m reels.generate --input outputs/xeanvi_mistake.json --output outputs/xeanvi_mistake.mp4
+```
 
 AI mode is optional and future-safe. If no AI provider/key is configured, local template mode is used automatically and does not require paid APIs.
