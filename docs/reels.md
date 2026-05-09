@@ -199,3 +199,27 @@ python -m reels.voiceover --input outputs/xeanvi_market_grid_voice.json --output
 ```
 
 If `--provider edge_tts_optional` is selected, `voiceover.script` is required and compliance-checked before generation.
+
+## Queue workflow (local scheduling prep only, no social upload)
+
+Use a queue JSON to group batch runs and execute one run at a time:
+
+```bash
+python -m reels.queue --input examples/reels_queue_example.json --list-runs
+python -m reels.queue --input examples/reels_queue_example.json --run-id day_01
+python -m reels.queue --input examples/reels_queue_example.json --run-id day_01 --dry-run
+python -m reels.queue --input examples/reels_queue_example.json --next
+```
+
+Queue format (`examples/reels_queue_example.json`):
+- `output_root` (optional; defaults to `outputs/queue`)
+- `batch_defaults` (same fields as `reels.batch` defaults)
+- `runs[]` with unique non-empty `run_id` and non-empty `items[]`
+
+Modes:
+- `--list-runs`: prints all run IDs with item counts.
+- `--run-id <id>`: runs exactly one queue run to `<output_root>/<run_id>/`.
+- `--run-id <id> --dry-run`: validates and prints planned output paths without writing files.
+- `--next`: runs first pending run where `<output_root>/<run_id>/summary.json` does not yet exist.
+
+Validation includes invalid JSON, missing/duplicate run IDs, missing items, and unknown selected run IDs. Item topics are still validated by batch compliance checks.
