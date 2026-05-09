@@ -278,3 +278,60 @@ def test_batch_default_voiceover_provider_remains_silent_wav(tmp_path: Path) -> 
     payload["items"][0]["slug"] = "default_silent"
     run_batch(payload, tmp_path)
     assert (tmp_path / "default_silent" / "default_silent.wav").exists()
+
+
+def test_batch_mp3_voiceover_path_used_in_storyboard_summary_and_events(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = _base_payload()
+    payload["generate_voiceover_placeholder"] = True
+    payload["voiceover_provider"] = "edge_tts_optional"
+    payload["voiceover_format"] = "mp3"
+    payload["items"][0]["slug"] = "mp3_item"
+
+    class _FakeProvider:
+        def generate(self, *, config, output, voice=None, audio_format=None):
+            output.write_bytes(b"fake-mp3")
+
+    monkeypatch.setattr("reels.batch.get_provider", lambda _name: _FakeProvider())
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    json_path = tmp_path / "mp3_item" / "mp3_item.json"
+    storyboard = json.loads(json_path.read_text(encoding="utf-8"))
+    assert storyboard["voiceover"]["audio_path"].endswith(".mp3")
+    assert item["audio_path"].endswith(".mp3")
+    assert "wav_path" not in item
+    lines = [json.loads(line) for line in (tmp_path / "events.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    voice_evt = [line for line in lines if line["event"] == "voiceover_written" and line.get("slug") == "mp3_item"][0]
+    assert voice_evt["path"] == item["audio_path"] == storyboard["voiceover"]["audio_path"]
+
+
+def test_batch_wav_voiceover_sets_audio_path_and_wav_path(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_voiceover_placeholder"] = True
+    payload["voiceover_format"] = "wav"
+    payload["items"][0]["slug"] = "wav_item"
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    storyboard = json.loads((tmp_path / "wav_item" / "wav_item.json").read_text(encoding="utf-8"))
+    assert item["audio_path"].endswith(".wav")
+    assert item["wav_path"].endswith(".wav")
+    assert storyboard["voiceover"]["audio_path"].endswith(".wav")
+    assert load_reel_config(tmp_path / "wav_item" / "wav_item.json")
+
+
+def test_unsupported_voiceover_format_fails_item_cleanly(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_voiceover_placeholder"] = True
+    payload["voiceover_format"] = "flac"
+    summary = run_batch(payload, tmp_path)
+    assert summary["items"][0]["status"] == "failed"
+    assert summary["items"][0]["error"] == "items[0].voiceover_format must be one of: wav, mp3"
+
+
+def test_silent_provider_rejects_mp3_format_cleanly(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_voiceover_placeholder"] = True
+    payload["voiceover_provider"] = "silent"
+    payload["voiceover_format"] = "mp3"
+    summary = run_batch(payload, tmp_path)
+    assert summary["items"][0]["status"] == "failed"
+    assert "voiceover_format must be wav when voiceover_provider is silent" in summary["items"][0]["error"]

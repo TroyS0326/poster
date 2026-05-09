@@ -85,6 +85,19 @@ def _build_summary(output_dir: Path, items: list[dict[str, Any]]) -> dict[str, A
     }
 
 
+def _normalize_voiceover_format(value: Any, *, field_name: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be one of: wav, mp3")
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    if normalized not in {"wav", "mp3"}:
+        raise ValueError(f"{field_name} must be one of: wav, mp3")
+    return normalized
+
+
 def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
     skipped_render_count = sum(
         1 for item in summary["items"] if item.get("status") == "success" and item.get("render_requested") is False
@@ -100,8 +113,8 @@ def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
         f"- render_failed_count: {summary['render_failed_count']}",
         f"- skipped_render_count: {skipped_render_count}",
         "",
-        "| index | slug | topic | status | json_path | png_path | wav_path | mp4_path | error |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| index | slug | topic | status | json_path | png_path | audio_path | wav_path | mp4_path | error |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for item in summary["items"]:
         row = [
@@ -111,6 +124,7 @@ def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
             str(item.get("status", "")),
             str(item.get("json_path", "")),
             str(item.get("png_path", "")),
+            str(item.get("audio_path", "")),
             str(item.get("wav_path", "")),
             str(item.get("mp4_path", "")),
             str(item.get("error", "")).replace("\n", " "),
@@ -186,8 +200,14 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             png_path = item_dir / f"{slug}.png"
             wav_path = item_dir / f"{slug}.wav"
             mp4_path = item_dir / f"{slug}.mp4"
+            voiceover_provider = str(merged.get("voiceover_provider", "silent"))
+            voiceover_format = _normalize_voiceover_format(merged.get("voiceover_format"), field_name=f"items[{idx}].voiceover_format")
+            final_audio_format = voiceover_format or "wav"
+            if voiceover_provider == "silent" and final_audio_format != "wav":
+                raise ValueError(f"items[{idx}].voiceover_format must be wav when voiceover_provider is silent")
+            voice_output_path = item_dir / f"{slug}.{final_audio_format}"
 
-            voiceover_audio_path = str(wav_path) if generate_voiceover_placeholder else None
+            voiceover_audio_path = str(voice_output_path) if generate_voiceover_placeholder else None
             background_image_path = str(png_path) if generate_background else None
 
             resolved_style = resolve_visual_style(brand, visual_style)
@@ -226,14 +246,12 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
 
             if generate_voiceover_placeholder:
                 cfg = load_reel_config(json_path)
-                voiceover_provider = str(merged.get("voiceover_provider", "silent"))
                 voiceover_voice = merged.get("voiceover_voice")
-                voiceover_format = merged.get("voiceover_format")
-                ext = f".{voiceover_format}" if isinstance(voiceover_format, str) and voiceover_format.strip() else ".wav"
-                voice_output_path = wav_path if ext == ".wav" else item_dir / f"{slug}{ext}"
                 provider = get_provider(voiceover_provider)
-                provider.generate(config=cfg, output=voice_output_path, voice=voiceover_voice, audio_format=voiceover_format)
-                entry["wav_path"] = str(voice_output_path)
+                provider.generate(config=cfg, output=voice_output_path, voice=voiceover_voice, audio_format=final_audio_format)
+                entry["audio_path"] = str(voice_output_path)
+                if voice_output_path.suffix.lower() == ".wav":
+                    entry["wav_path"] = str(voice_output_path)
                 _write_event(events_path, {"event": "voiceover_written", "index": idx, "slug": slug, "path": str(voice_output_path), "provider": voiceover_provider})
 
             if render_mp4:
@@ -271,7 +289,7 @@ def _print_summary(summary: dict[str, Any]) -> None:
     for item in summary["items"]:
         slug = item.get("slug") or f"index_{item.get('index')}"
         parts = [f"slug={slug}", f"status={item.get('status')}"]
-        for key in ("json_path", "png_path", "wav_path", "mp4_path"):
+        for key in ("json_path", "png_path", "audio_path", "wav_path", "mp4_path"):
             if item.get(key):
                 parts.append(f"{key}={item[key]}")
         if item.get("error"):
