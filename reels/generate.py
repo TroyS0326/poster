@@ -82,6 +82,15 @@ def _scene_for_time(config: ReelConfig, t: float):
     return config.scenes[-1]
 
 
+def _scene_start_time(config: ReelConfig, target_scene) -> float:
+    elapsed = 0.0
+    for scene in config.scenes:
+        if scene is target_scene:
+            return elapsed
+        elapsed += scene.duration
+    return 0.0
+
+
 def render_reel(config: ReelConfig, output_path: str | Path) -> None:
     try:
         import numpy as np
@@ -105,19 +114,29 @@ def render_reel(config: ReelConfig, output_path: str | Path) -> None:
     body_spacing = max(10, int(h * 0.01))
 
     base_bg = _load_background(config)
+    scene_bg = {}
+    for i, sc in enumerate(config.scenes):
+        if sc.image_path and Path(sc.image_path).exists():
+            from PIL import Image
+            scene_bg[i] = Image.open(sc.image_path).convert("RGB").resize((w, h))
 
     def make_frame(t: float):
         scene = _scene_for_time(config, t)
         frame = base_bg.copy()
+        scene_idx = config.scenes.index(scene)
+        if scene_idx in scene_bg:
+            frame = scene_bg[scene_idx].copy()
+        elif scene_bg:
+            frame = next(iter(scene_bg.values())).copy()
 
-        if config.background.type == "image":
-            progress = min(1.0, t / max(config.duration_seconds, 0.001))
-            zoom = 1.0 + 0.05 * progress
-            zw, zh = int(w / zoom), int(h / zoom)
-            ox, oy = (w - zw) // 2, (h - zh) // 2
-            frame = frame.crop((ox, oy, ox + zw, oy + zh)).resize((w, h))
+        progress = (t - _scene_start_time(config, scene)) / max(scene.duration, 0.001)
+        zoom = 1.0 + 0.07 * max(0.0, min(1.0, progress))
+        zw, zh = int(w / zoom), int(h / zoom)
+        ox, oy = (w - zw) // 2, (h - zh) // 2
+        frame = frame.crop((ox, oy, ox + zw, oy + zh)).resize((w, h))
 
-        draw = ImageDraw.Draw(frame)
+        draw = ImageDraw.Draw(frame, "RGBA")
+        draw.rectangle((0, int(h*0.5), w, h), fill=(0,0,0,95))
         title_lines = _wrap_text(draw, config.title, font_title, text_width)
         scene_lines = _wrap_text(draw, scene.text, font_body, text_width)
 

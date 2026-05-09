@@ -22,6 +22,7 @@ class BackgroundConfig:
 class SceneConfig:
     text: str
     duration: float
+    image_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -136,7 +137,9 @@ def load_reel_config(path: str | Path) -> ReelConfig:
         if duration <= 0:
             raise ValueError(f"scene[{idx}] duration must be numeric and > 0")
 
-        scenes.append(SceneConfig(text=text, duration=duration))
+        image_path_raw = scene.get("image_path")
+        image_path = str(image_path_raw).strip() if image_path_raw else None
+        scenes.append(SceneConfig(text=text, duration=duration, image_path=image_path))
         total_scene_duration += duration
 
     if total_scene_duration > duration_seconds + 1e-9:

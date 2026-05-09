@@ -276,3 +276,23 @@ Cleanup behavior:
 - Deletes heavy files (`.mp4,.wav,.mp3,.png` by default, configurable via `REELS_DELETE_AFTER_SUCCESS_EXTENSIONS`).
 - Always keeps `.json`, summary/report/event files.
 - TryCloudflare URLs can change after tunnel restart; update `REELS_PUBLIC_BASE_URL` accordingly.
+
+## Scheduler (one reel every 8 hours)
+Use `reels.scheduler` for production pacing. It posts exactly one next pending queue item per cycle and then sleeps.
+
+Dry-run one item:
+```bash
+python -m reels.scheduler --queue examples/reels_queue_30_day_3_per_day_example.json --public-base-url https://YOUR-TUNNEL.trycloudflare.com --once --dry-run
+```
+
+Real one item:
+```bash
+python -m reels.scheduler --queue examples/reels_queue_30_day_3_per_day_example.json --public-base-url https://YOUR-TUNNEL.trycloudflare.com --once
+```
+
+Long-running:
+```bash
+python -m reels.scheduler --queue examples/reels_queue_30_day_3_per_day_example.json --public-base-url https://YOUR-TUNNEL.trycloudflare.com --interval-hours 8
+```
+
+Scene-aware visuals are now generated per scene (for example `scene_01.png`) and used by the renderer with zoom + readability overlay. Cleanup behavior remains publish-success only.

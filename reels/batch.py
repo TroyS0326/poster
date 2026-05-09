@@ -20,6 +20,7 @@ from reels.storyboard import (
 )
 from reels.visuals import resolve_visual_style
 from reels.tts import get_provider
+from reels.scene_images import generate_scene_images
 
 
 def _slugify(value: str) -> str:
@@ -321,6 +322,15 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                     include_voiceover_script=generate_voiceover_placeholder,
                     voiceover_audio_path=voiceover_audio_path,
                 )
+            scene_images = generate_scene_images(storyboard, item_dir)
+            if scene_images:
+                for scene_idx, scene in enumerate(storyboard.get("scenes", [])):
+                    if scene_idx < len(scene_images) and isinstance(scene, dict):
+                        scene["image_path"] = scene_images[scene_idx]
+                if isinstance(storyboard.get("background"), dict) and scene_images:
+                    storyboard["background"]["type"] = "image"
+                    storyboard["background"]["path"] = scene_images[0]
+                entry["scene_images"] = scene_images
             json_path.write_text(json.dumps(storyboard, indent=2), encoding="utf-8")
             _write_event(events_path, {"event": "storyboard_written", "index": idx, "slug": slug, "path": str(json_path)})
             entry["slug"] = slug
