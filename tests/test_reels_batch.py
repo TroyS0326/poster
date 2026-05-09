@@ -161,6 +161,10 @@ def test_summary_success_includes_topic_and_slug(tmp_path: Path) -> None:
     assert item["status"] == "success"
     assert item["slug"] == "summary_ok"
     assert item["topic"] == payload["items"][0]["topic"]
+    assert summary["total_items"] == 1
+    assert summary["success_count"] == 1
+    assert summary["failed_count"] == 0
+    assert summary["render_failed_count"] == 0
 
 
 def test_summary_failed_item_includes_topic_and_error(tmp_path: Path) -> None:
@@ -171,3 +175,37 @@ def test_summary_failed_item_includes_topic_and_error(tmp_path: Path) -> None:
     assert item["status"] == "failed"
     assert item["topic"] == "Topic with bad duration"
     assert "must be numeric" in item["error"]
+
+
+def test_run_report_created_with_slug_and_status(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"][0]["slug"] = "report_ok"
+    run_batch(payload, tmp_path)
+    report_path = tmp_path / "run_report.md"
+    assert report_path.exists()
+    report_text = report_path.read_text(encoding="utf-8")
+    assert "report_ok" in report_text
+    assert "success" in report_text
+
+
+def test_events_log_created_with_batch_and_item_events(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"][0]["slug"] = "event_ok"
+    run_batch(payload, tmp_path)
+    events_path = tmp_path / "events.jsonl"
+    assert events_path.exists()
+    lines = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    names = [line["event"] for line in lines]
+    assert "batch_started" in names
+    assert "batch_completed" in names
+    assert "item_started" in names
+    assert "item_completed" in names
+
+
+def test_events_log_contains_item_failed_for_bad_item(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [{"slug": "bad_item"}]
+    run_batch(payload, tmp_path)
+    events_path = tmp_path / "events.jsonl"
+    lines = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert any(line["event"] == "item_failed" for line in lines)

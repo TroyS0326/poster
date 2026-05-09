@@ -171,6 +171,11 @@ Per-item output paths are predictable:
 
 Batch writes a machine-readable summary file at:
 - `outputs/batch/summary.json`
+- `summary.json` now includes run-level metadata: `output_dir`, `total_items`, `success_count`, `failed_count`, `render_failed_count`, and per-item `items[]`.
+
+Batch also writes local operational logs for debugging:
+- `outputs/batch/run_report.md` (human-readable run report with counts + per-item table)
+- `outputs/batch/events.jsonl` (JSONL event stream with `batch_started`, `item_started`, `storyboard_written`, `background_written`, `voiceover_written`, `render_written`, `item_failed`, `item_completed`, `batch_completed`)
 
 Runtime behavior:
 - If `render_mp4=false`, MP4 rendering is skipped.
