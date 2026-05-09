@@ -26,7 +26,7 @@ def _fit_vertical(clip: VideoFileClip, width: int, height: int) -> VideoFileClip
     return clip.cropped(x1=x1, y1=y1, x2=x1 + width, y2=y1 + height)
 
 
-def render_video_reel(config: ReelConfig, output_path: str | Path, clips, template_name: str = "discipline_engine") -> None:
+def render_video_reel(config: ReelConfig, output_path: str | Path, clips, template_name: str = "discipline_engine", generated_scene_clips: list[str] | None = None) -> None:
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     duration = clamp_duration(config.duration_seconds)
@@ -35,8 +35,12 @@ def render_video_reel(config: ReelConfig, output_path: str | Path, clips, templa
     t_cursor = 0.0
     for i, sc in enumerate(config.scenes):
         tone = "cta" if i == len(config.scenes) - 1 else ("mistake" if any(x in sc.text.lower() for x in ["risk", "revenge", "overtrading", "mistake"]) else "discipline")
-        asset = select_clip(clips, topic=config.title, scene_text=sc.text, template=template_name, tone=tone)
-        base = VideoFileClip(asset.path, audio=False)
+        if generated_scene_clips:
+            gp = generated_scene_clips[min(i, len(generated_scene_clips)-1)]
+            base = VideoFileClip(gp, audio=False)
+        else:
+            asset = select_clip(clips, topic=config.title, scene_text=sc.text, template=template_name, tone=tone)
+            base = VideoFileClip(asset.path, audio=False)
         seg_dur = min(max(1.2, sc.duration), 3.5)
         segment = _fit_vertical(base.subclipped(0, min(base.duration, seg_dur)), width, height)
         zoom = 1.08 if tone == "mistake" else 1.04

@@ -367,3 +367,30 @@ Queue cadence remains unchanged:
 - Add 3 items per day in queue input.
 - Scheduler processes one item per cycle.
 - Default cycle is one Reel every 8 hours.
+
+## Local ComfyUI video generation
+
+```env
+REELS_RENDERER=video
+REELS_VIDEO_PROVIDER=comfy
+REELS_GENERATE_VIDEO_CLIPS=true
+REELS_MAX_GENERATED_CLIPS_PER_REEL=3
+COMFYUI_API_URL=http://127.0.0.1:8188
+COMFYUI_WORKFLOW_PATH=workflows/reels_video_workflow.json
+COMFYUI_PROMPT_NODE_ID=...
+COMFYUI_NEGATIVE_PROMPT_NODE_ID=...
+COMFYUI_SEED_NODE_ID=...
+COMFYUI_WIDTH=720
+COMFYUI_HEIGHT=1280
+COMFYUI_FRAMES=81
+COMFYUI_FPS=24
+COMFYUI_TIMEOUT_SECONDS=1800
+COMFYUI_POLL_SECONDS=5
+COMFYUI_MODEL_FAMILY=hunyuan15
+```
+
+```bash
+python -m reels.scheduler --queue examples/reels_queue_30_day_3_per_day_example.json --public-base-url https://YOUR-TUNNEL.trycloudflare.com --once --dry-run
+```
+
+Warnings: local generation is slow; 24 GB VRAM is enough to test HunyuanVideo 1.5 and lighter/quantized Wan workflows, while Wan 14B may need FP8/GGUF and careful settings; inspect generated reels before real posting.
