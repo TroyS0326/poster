@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 
+from reels.visuals import build_visual_prompt, resolve_visual_style, SUPPORTED_VISUAL_STYLES
+
 DEFAULT_TONE = "direct"
 DEFAULT_DURATION_SECONDS = 18
 DEFAULT_SCENE_COUNT = 4
@@ -77,6 +79,7 @@ def _validate_inputs(
     output: Path,
     template: str = DEFAULT_TEMPLATE,
     brand: str = DEFAULT_BRAND,
+    visual_style: str | None = None,
 ) -> None:
     if not topic or not topic.strip():
         raise ValueError("topic must not be empty")
@@ -92,6 +95,7 @@ def _validate_inputs(
         raise ValueError(f"unsupported brand: {brand}")
     if output.suffix.lower() != ".json":
         raise ValueError("output path must end with .json")
+    resolve_visual_style(brand, visual_style)
 
 
 def _template_lines(template: str, topic: str, audience: str, cta: str, brand: str) -> list[str]:
@@ -159,8 +163,9 @@ def generate_storyboard(
     background_type: str = "gradient",
     template: str = DEFAULT_TEMPLATE,
     brand: str = DEFAULT_BRAND,
+    visual_style: str | None = None,
 ) -> dict:
-    _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand)
+    _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand, visual_style)
 
     pack = BRAND_PACKS[brand]
     audience = (audience or "").strip() or pack["default_audience"]
@@ -181,6 +186,9 @@ def generate_storyboard(
         background["color"] = bg["solid"]
         background["color_end"] = bg["solid"]
 
+    style = resolve_visual_style(brand, visual_style)
+    visual = build_visual_prompt(style=style, brand=brand, topic=topic)
+
     payload = {
         "title": title,
         "duration_seconds": duration_seconds,
@@ -189,6 +197,12 @@ def generate_storyboard(
         "background": background,
         "scenes": scenes,
         "voiceover": {"enabled": False, "provider": "", "audio_path": ""},
+        "visual": {
+            "style": visual.style,
+            "image_prompt": visual.image_prompt,
+            "negative_prompt": visual.negative_prompt,
+            "background_role": "optional_ai_or_manual_background",
+        },
     }
     _validate_storyboard_compliance(payload)
     return payload
@@ -205,12 +219,13 @@ def main() -> int:
     parser.add_argument("--background-type", default="gradient", help="solid or gradient")
     parser.add_argument("--template", default=DEFAULT_TEMPLATE, choices=sorted(SUPPORTED_TEMPLATES))
     parser.add_argument("--brand", default=DEFAULT_BRAND, choices=sorted(SUPPORTED_BRANDS))
+    parser.add_argument("--visual-style", default=None, choices=sorted(SUPPORTED_VISUAL_STYLES), help="Optional visual style override")
     parser.add_argument("--output", required=True, help="Output JSON path")
     args = parser.parse_args()
 
     output = Path(args.output)
     try:
-        _validate_inputs(args.topic, args.duration_seconds, args.scene_count, args.background_type, output, args.template, args.brand)
+        _validate_inputs(args.topic, args.duration_seconds, args.scene_count, args.background_type, output, args.template, args.brand, args.visual_style)
 
         ai_provider = os.getenv("REELS_STORYBOARD_AI_PROVIDER", "").strip()
         if ai_provider:
@@ -225,6 +240,7 @@ def main() -> int:
                 background_type=args.background_type,
                 template=args.template,
                 brand=args.brand,
+                visual_style=args.visual_style,
             )
         else:
             storyboard = generate_storyboard(
@@ -237,6 +253,7 @@ def main() -> int:
                 background_type=args.background_type,
                 template=args.template,
                 brand=args.brand,
+                visual_style=args.visual_style,
             )
 
         output.parent.mkdir(parents=True, exist_ok=True)
