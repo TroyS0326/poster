@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 from reels.backgrounds import generate_background_png
-from reels.compliance import BANNED_MARKETING_TERMS, validate_compliance_text
+from reels.compliance import validate_compliance_text
 from reels.visuals import (
     SUPPORTED_VISUAL_BRANDS,
     SUPPORTED_VISUAL_STYLES,
@@ -148,6 +148,8 @@ def generate_storyboard(
     background_image_path: str | None = None,
 ) -> dict:
     _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand, visual_style)
+    if background_image_path and not background_image_path.lower().endswith(".png"):
+        raise ValueError("background_image_path must end with .png")
 
     pack = BRAND_PACKS[brand]
     audience = (audience or "").strip() or pack["default_audience"]
@@ -224,6 +226,8 @@ def main() -> int:
 
         resolved_style = resolve_visual_style(args.brand, args.visual_style)
         background_image_path = None
+        if args.background_output and not args.generate_background:
+            raise ValueError("background-output requires --generate-background")
         if args.background_output and not args.background_output.lower().endswith(".png"):
             raise ValueError("background-output path must end with .png")
         if args.generate_background:

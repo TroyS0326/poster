@@ -63,7 +63,7 @@ Useful options:
 - `--brand` (`generic`, `xeanvi`; default `generic`)
 - `--visual-style` (`fintech_dark`, `workstation`, `abstract_risk`, `market_grid`, `minimal_gradient`; default uses brand pack)
 - `--generate-background` generates a local PNG background and writes storyboard JSON with `background.type=image`
-- `--background-output` optional `.png` path for generated background (default: `outputs/backgrounds/<safe_name>.png`)
+- `--background-output` optional `.png` path for generated background (default: `outputs/backgrounds/<safe_name>.png`); requires `--generate-background`
 
 Template structures stay concise for vertical overlays and adapt to scene count.
 
