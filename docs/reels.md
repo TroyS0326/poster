@@ -61,6 +61,7 @@ Useful options:
 - `--background-type` (`solid` or `gradient`)
 - `--template` (`discipline`, `mistake`, `checklist`, `myth`, `before-after`; default `discipline`)
 - `--brand` (`generic`, `xeanvi`; default `generic`)
+- `--visual-style` (`fintech_dark`, `workstation`, `abstract_risk`, `market_grid`, `minimal_gradient`; default uses brand pack)
 
 Template structures stay concise for vertical overlays and adapt to scene count.
 
@@ -76,3 +77,42 @@ python -m reels.generate --input outputs/xeanvi_mistake.json --output outputs/xe
 ```
 
 AI mode is optional and future-safe. If no AI provider/key is configured, local template mode is used automatically and does not require paid APIs.
+
+
+Storyboard JSON now includes an optional top-level `visual` field:
+
+```json
+"visual": {
+  "style": "market_grid",
+  "image_prompt": "...",
+  "negative_prompt": "...",
+  "background_role": "optional_ai_or_manual_background"
+}
+```
+
+### Local background PNG generator (no external API)
+
+Generate a style-aligned 1080x1920 PNG using Pillow/numpy:
+
+```bash
+python -m reels.backgrounds --style fintech_dark --brand xeanvi --output outputs/backgrounds/fintech_dark.png
+```
+
+This is separate from storyboard generation.
+
+### Workflows
+
+A. Visual prompt workflow (JSON-only):
+1. Run `reels.storyboard` with optional `--visual-style`.
+2. Use `visual.image_prompt` + `visual.negative_prompt` later with your AI/manual art workflow.
+
+B. Local PNG workflow:
+1. Generate PNG with `reels.backgrounds`.
+2. Manually set storyboard background to image path:
+
+```json
+"background": {
+  "type": "image",
+  "path": "outputs/backgrounds/fintech_dark.png"
+}
+```
