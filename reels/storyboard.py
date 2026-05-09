@@ -62,6 +62,22 @@ def _build_scene_texts(topic: str, audience: str, tone: str, call_to_action: str
     return scenes
 
 
+def _allocate_scene_durations(duration_seconds: int, scene_count: int) -> list[float]:
+    base = round(duration_seconds / scene_count, 2)
+    durations = [base] * scene_count
+    allocated = round(base * (scene_count - 1), 2)
+    durations[-1] = round(duration_seconds - allocated, 2)
+
+    if durations[-1] <= 0:
+        # Safety fallback: distribute in centiseconds and convert back.
+        total_cents = int(round(duration_seconds * 100))
+        base_cents, remainder = divmod(total_cents, scene_count)
+        durations = [base_cents / 100.0] * scene_count
+        durations[-1] = (base_cents + remainder) / 100.0
+
+    return durations
+
+
 def generate_storyboard(
     topic: str,
     audience: str = DEFAULT_AUDIENCE,
@@ -71,10 +87,12 @@ def generate_storyboard(
     scene_count: int = DEFAULT_SCENE_COUNT,
     background_type: str = "gradient",
 ) -> dict:
+    _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"))
+
     title = f"{topic.strip()}"
     scene_texts = _build_scene_texts(topic, audience, tone, call_to_action, scene_count)
-    per_scene = round(duration_seconds / scene_count, 2)
-    scenes = [{"text": text, "duration": per_scene} for text in scene_texts]
+    durations = _allocate_scene_durations(duration_seconds, scene_count)
+    scenes = [{"text": text, "duration": duration} for text, duration in zip(scene_texts, durations)]
 
     background = {"type": background_type, "color": "#101820", "color_end": "#1f4068"}
     if background_type == "solid":
