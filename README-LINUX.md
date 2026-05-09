@@ -112,3 +112,5 @@ A separate module is available for local vertical MP4 reel generation without ch
 For Reels Vast.ai deployment and operations, see docs/vast_reels_deploy.md
 
 - Reels publisher is available via `python -m reels.publish` and should be tested with `--dry-run` first before real posting.
+
+- Reels publishing/autopost docs: see docs/reels.md (public /reels/outputs route, dry-run publish, and 3-per-day autopost).

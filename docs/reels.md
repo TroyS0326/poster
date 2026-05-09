@@ -250,3 +250,18 @@ Instagram real publish command (run only after dry-run + URL reachability checks
 ```bash
 python -m reels.publish --input outputs/queue/day_03/.../file.json --video outputs/queue/day_03/.../file.mp4 --platform instagram --public-base-url https://YOUR_TUNNEL_URL
 ```
+
+## Reels publishing (separate from generation)
+Generation (`reels.queue`, `reels.batch`, `reels.generate`) creates assets first. Publishing is a separate explicit step.
+
+- Public serving route for assets: `/reels/outputs/<path:filename>` (from local `outputs/`).
+- Set `REELS_PUBLIC_BASE_URL` to your public dashboard URL (for example a Cloudflare tunnel URL).
+- Dry run publish:
+  - `python -m reels.publish --input outputs/queue/day_03/example/example.json --video outputs/queue/day_03/example/example.mp4 --platform both --public-base-url https://example.trycloudflare.com --dry-run`
+- Auto-post up to 3/day:
+  - `python -m reels.autopost --queue examples/reels_queue_30_day_3_per_day_example.json --run-id day_03 --public-base-url https://example.trycloudflare.com --limit 3 --dry-run`
+
+Cleanup behavior:
+- Deletes heavy files (`.mp4,.wav,.mp3,.png` by default) only if **both** Instagram and Facebook publish succeed.
+- On failure of either platform, files are kept for retry.
+- TryCloudflare URLs can change after tunnel restart; update `REELS_PUBLIC_BASE_URL` accordingly.
