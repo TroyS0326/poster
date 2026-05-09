@@ -325,3 +325,45 @@ Dry-run and real-mode examples:
 - Dry-run once: `python -m reels.scheduler --queue examples/reels_queue_example.json --public-base-url https://YOUR_URL --once --dry-run`
 - Real once: `python -m reels.scheduler --queue examples/reels_queue_example.json --public-base-url https://YOUR_URL --once`
 - Long-running 8-hour loop: `python -m reels.scheduler --queue examples/reels_queue_example.json --public-base-url https://YOUR_URL`
+
+## Video renderer (default) vs legacy still renderer
+
+The old still/image renderer (`python -m reels.generate`) is now **legacy**. The new default path is the video-clip renderer controlled by:
+
+- `REELS_RENDERER=video` (default)
+- `REELS_RENDERER=legacy` (explicit fallback)
+
+### Build local clip library
+
+Create local clip folders under:
+
+- `assets/reels/video_clips/trading/`
+- `assets/reels/video_clips/workstation/`
+- `assets/reels/video_clips/charts/`
+- `assets/reels/video_clips/abstract/`
+- `assets/reels/video_clips/risk/`
+- `assets/reels/video_clips/discipline/`
+- `assets/reels/video_clips/mistakes/`
+- `assets/reels/video_clips/paper_testing/`
+- `assets/reels/video_clips/automation/`
+
+Copy `assets/reels/video_manifest.example.json` to `assets/reels/video_manifest.json`, then update each clip `path`, `tags`, `mood`, and `safe_for`.
+
+### Render one Reel with new video engine
+
+```bash
+python -m reels.video_generate --input outputs/storyboard.json --output outputs/reel.mp4 --manifest assets/reels/video_manifest.json
+```
+
+Scheduler/autopost config:
+
+```bash
+REELS_RENDERER=video
+REELS_VIDEO_MANIFEST=assets/reels/video_manifest.json
+REELS_POST_INTERVAL_HOURS=8
+```
+
+Queue cadence remains unchanged:
+- Add 3 items per day in queue input.
+- Scheduler processes one item per cycle.
+- Default cycle is one Reel every 8 hours.

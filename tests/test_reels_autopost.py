@@ -19,6 +19,7 @@ def _make_queue(tmp_path: Path):
 
 
 def _set_cfg(monkeypatch, *, post_dry_run=True, post_to_instagram=True, post_to_facebook=True):
+    monkeypatch.setenv("REELS_RENDERER", "legacy")
     cfg = type("Cfg", (), {
         "cleanup_after_success": True,
         "delete_after_success_extensions": (".mp4", ".wav", ".mp3", ".png"),
