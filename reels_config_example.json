@@ -1,0 +1,33 @@
+{
+  "title": "Stop Trading Emotionally",
+  "duration_seconds": 18,
+  "size": [1080, 1920],
+  "fps": 24,
+  "background": {
+    "type": "solid",
+    "color": "#111111"
+  },
+  "voiceover": {
+    "enabled": false,
+    "provider": "",
+    "audio_path": ""
+  },
+  "scenes": [
+    {
+      "text": "Most traders do not lose because they lack ideas.",
+      "duration": 4
+    },
+    {
+      "text": "They lose because they break their own rules.",
+      "duration": 5
+    },
+    {
+      "text": "Your system should turn playbooks into execution discipline.",
+      "duration": 6
+    },
+    {
+      "text": "Define the rules. Let the system enforce them.",
+      "duration": 3
+    }
+  ]
+}

@@ -84,3 +84,11 @@ Run:
 - Automated posts avoid hands, faces, people, and visible anatomy because fast image models can distort body details and reduce production quality.
 - For reliable premium output, prefer product UI mockups, empty desk workstation scenes, abstract risk-control visuals, and clean fintech graphics.
 - Premium human/editorial images should be generated manually and reviewed before publishing.
+
+## Reels Generator (separate from poster bot)
+
+A separate module is available for local vertical MP4 reel generation without changing existing poster flow.
+
+- Command: `python -m reels.generate --input reels_config_example.json --output outputs/reel_example.mp4`
+- Docs: `docs/reels.md`
+- Output videos are generated under `outputs/` and are gitignored.
