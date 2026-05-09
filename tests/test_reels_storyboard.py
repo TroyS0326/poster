@@ -7,7 +7,7 @@ import pytest
 
 from reels.config import load_reel_config
 from reels.compliance import BANNED_MARKETING_TERMS
-from reels.storyboard import BRAND_PACKS, _allocate_scene_durations, _validate_inputs, generate_storyboard
+from reels.storyboard import BRAND_PACKS, _allocate_scene_durations, _safe_background_basename, _validate_inputs, generate_storyboard
 
 
 def test_duration_allocation_count_matches_scene_count() -> None:
@@ -191,6 +191,76 @@ def test_default_cli_compatible_behavior_still_works(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr + result.stdout
     cfg = load_reel_config(output)
     assert cfg.title
+
+
+def test_safe_background_basename_slug() -> None:
+    slug = _safe_background_basename("Xeanvi", "mistake", "market_grid", "The cost of breaking your own trading rules!!!")
+    assert slug.startswith("xeanvi_mistake_market_grid_the_cost_of_breaking_your_own_trading_rules")
+    assert "!" not in slug
+
+
+def test_storyboard_background_image_path_override() -> None:
+    payload = generate_storyboard(topic="Rules matter", background_image_path="outputs/backgrounds/a.png")
+    assert payload["background"]["type"] == "image"
+    assert payload["background"]["path"] == "outputs/backgrounds/a.png"
+
+
+def test_image_background_storyboard_loads_config(tmp_path: Path) -> None:
+    bg = tmp_path / "bg.png"
+    bg.write_bytes(b"fake")
+    payload = generate_storyboard(topic="Rules matter", background_image_path=str(bg))
+    path = tmp_path / "storyboard_image.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    cfg = load_reel_config(path)
+    assert cfg.background.type == "image"
+    assert cfg.background.path == str(bg)
+
+
+def test_cli_generate_background_creates_json_and_png(tmp_path: Path) -> None:
+    output = tmp_path / "storyboard.json"
+    bg_out = tmp_path / "custom.png"
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "reels.storyboard",
+            "--brand", "xeanvi",
+            "--template", "mistake",
+            "--visual-style", "market_grid",
+            "--generate-background",
+            "--background-output", str(bg_out),
+            "--topic", "The cost of breaking your own trading rules",
+            "--output", str(output),
+        ],
+        check=False, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert output.exists()
+    assert bg_out.exists()
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["background"]["type"] == "image"
+    assert payload["background"]["path"] == str(bg_out)
+
+
+def test_cli_generate_background_default_path(tmp_path: Path) -> None:
+    output = tmp_path / "storyboard.json"
+    result = subprocess.run(
+        [sys.executable, "-m", "reels.storyboard", "--brand", "xeanvi", "--template", "mistake", "--visual-style", "market_grid", "--generate-background", "--topic", "Topic", "--output", str(output)],
+        check=False, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    bg_path = Path(payload["background"]["path"])
+    assert payload["background"]["type"] == "image"
+    assert str(bg_path).startswith("outputs/backgrounds/")
+    assert bg_path.exists()
+
+
+def test_cli_background_output_non_png_fails(tmp_path: Path) -> None:
+    output = tmp_path / "storyboard.json"
+    result = subprocess.run(
+        [sys.executable, "-m", "reels.storyboard", "--topic", "Topic", "--generate-background", "--background-output", str(tmp_path / "bad.jpg"), "--output", str(output)],
+        check=False, capture_output=True, text=True,
+    )
+    assert result.returncode != 0
 
 
 def test_no_duplicate_banned_terms_constant_in_modules() -> None:

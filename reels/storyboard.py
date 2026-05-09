@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 
+from reels.backgrounds import generate_background_png
 from reels.compliance import BANNED_MARKETING_TERMS, validate_compliance_text
 from reels.visuals import (
     SUPPORTED_VISUAL_BRANDS,
@@ -143,6 +145,7 @@ def generate_storyboard(
     template: str = DEFAULT_TEMPLATE,
     brand: str = DEFAULT_BRAND,
     visual_style: str | None = None,
+    background_image_path: str | None = None,
 ) -> dict:
     _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand, visual_style)
 
@@ -160,10 +163,13 @@ def generate_storyboard(
     scenes = [{"text": text, "duration": duration} for text, duration in zip(scene_texts, durations)]
 
     bg = pack["background"]
-    background = {"type": background_type, "color": bg["gradient_start"], "color_end": bg["gradient_end"]}
-    if background_type == "solid":
-        background["color"] = bg["solid"]
-        background["color_end"] = bg["solid"]
+    if background_image_path:
+        background = {"type": "image", "path": background_image_path}
+    else:
+        background = {"type": background_type, "color": bg["gradient_start"], "color_end": bg["gradient_end"]}
+        if background_type == "solid":
+            background["color"] = bg["solid"]
+            background["color_end"] = bg["solid"]
 
     style = resolve_visual_style(brand, visual_style)
     visual = build_visual_prompt(style=style, brand=brand, topic=topic)
@@ -187,6 +193,14 @@ def generate_storyboard(
     return payload
 
 
+def _safe_background_basename(brand: str, template: str, visual_style: str, topic: str, max_length: int = 120) -> str:
+    raw = f"{brand}_{template}_{visual_style}_{topic}".lower().strip()
+    slug = re.sub(r"\s+", "_", raw)
+    slug = re.sub(r"[^a-z0-9_]+", "", slug)
+    slug = re.sub(r"_+", "_", slug).strip("_")
+    return slug[:max_length].rstrip("_") or "background"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate reel storyboard JSON from a topic")
     parser.add_argument("--topic", required=True, help="Reel topic/angle")
@@ -199,12 +213,23 @@ def main() -> int:
     parser.add_argument("--template", default=DEFAULT_TEMPLATE, choices=sorted(SUPPORTED_TEMPLATES))
     parser.add_argument("--brand", default=DEFAULT_BRAND, choices=sorted(SUPPORTED_BRANDS))
     parser.add_argument("--visual-style", default=None, choices=sorted(SUPPORTED_VISUAL_STYLES), help="Optional visual style override")
+    parser.add_argument("--generate-background", action="store_true", help="Generate local PNG background and use it in storyboard JSON")
+    parser.add_argument("--background-output", default=None, help="Optional PNG output path (must end with .png)")
     parser.add_argument("--output", required=True, help="Output JSON path")
     args = parser.parse_args()
 
     output = Path(args.output)
     try:
         _validate_inputs(args.topic, args.duration_seconds, args.scene_count, args.background_type, output, args.template, args.brand, args.visual_style)
+
+        resolved_style = resolve_visual_style(args.brand, args.visual_style)
+        background_image_path = None
+        if args.background_output and not args.background_output.lower().endswith(".png"):
+            raise ValueError("background-output path must end with .png")
+        if args.generate_background:
+            bg_out = Path(args.background_output) if args.background_output else Path("outputs/backgrounds") / f"{_safe_background_basename(args.brand, args.template, resolved_style, args.topic)}.png"
+            generate_background_png(style=resolved_style, brand=args.brand, output=bg_out)
+            background_image_path = str(bg_out)
 
         ai_provider = os.getenv("REELS_STORYBOARD_AI_PROVIDER", "").strip()
         if ai_provider:
@@ -220,6 +245,7 @@ def main() -> int:
                 template=args.template,
                 brand=args.brand,
                 visual_style=args.visual_style,
+                background_image_path=background_image_path,
             )
         else:
             storyboard = generate_storyboard(
@@ -233,6 +259,7 @@ def main() -> int:
                 template=args.template,
                 brand=args.brand,
                 visual_style=args.visual_style,
+                background_image_path=background_image_path,
             )
 
         output.parent.mkdir(parents=True, exist_ok=True)
