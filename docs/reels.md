@@ -280,6 +280,15 @@ Cleanup behavior:
 ## Scheduler (one reel every 8 hours)
 Use `reels.scheduler` for production pacing. It posts exactly one next pending queue item per cycle and then sleeps.
 
+Scheduler state behavior:
+- Dry-run processes/plans one pending item but does **not** advance `posted` state.
+- Re-running `--once --dry-run` keeps selecting the same next pending item.
+- Real scheduler advances `posted` only after successful publish for selected platform targets:
+  - `platform=both`: Instagram + Facebook must both succeed.
+  - `platform=instagram`: Instagram must succeed.
+  - `platform=facebook`: Facebook must succeed.
+- Render failures or publish failures are recorded in `failed` state and are not marked posted.
+
 Dry-run one item:
 ```bash
 python -m reels.scheduler --queue examples/reels_queue_30_day_3_per_day_example.json --public-base-url https://YOUR-TUNNEL.trycloudflare.com --once --dry-run

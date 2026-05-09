@@ -3,6 +3,8 @@ import argparse, json, os, time
 from pathlib import Path
 
 from reels.autopost import run_autopost
+from reels.autopost import _publish_success_for_platform
+from reels.batch import _slugify
 from reels.queue import load_queue_input, validate_queue_payload, _resolve_output_root
 
 
@@ -24,7 +26,23 @@ def _save_state(path: Path, state: dict) -> None:
 def _iter_items(payload: dict):
     for run in validate_queue_payload(payload):
         for item in run["items"]:
-            yield run["run_id"], str(item.get("slug") or item.get("topic","")).strip().lower().replace(" ","_")
+            raw_slug = str(item.get("slug", "")).strip()
+            if raw_slug:
+                slug = _slugify(raw_slug)
+            else:
+                slug = _slugify(str(item.get("topic", "")))
+            yield run["run_id"], slug
+
+
+def _publish_success_for_item(item: dict, platform: str, dry_run: bool) -> bool:
+    if dry_run:
+        return False
+    if item.get("status") == "render_failed":
+        return False
+    publish_result = item.get("publish")
+    if not isinstance(publish_result, dict):
+        return False
+    return _publish_success_for_platform(platform, publish_result)
 
 
 def _next_pending(payload: dict, state: dict, force_retry_failed: bool):
@@ -54,12 +72,21 @@ def run_scheduler(queue: Path, public_base_url: str, interval_hours: float = 8, 
         run_id, slug, key = nxt
         result = run_autopost(queue, run_id, public_base_url, limit=1, dry_run=dry_run)
         item = result.get("items", [{}])[0] if result.get("items") else {}
-        ok = dry_run or item.get("publish") is not None
+        platform = result.get("platform", "none")
+        ok = _publish_success_for_item(item, platform, dry_run)
         if ok:
             state.setdefault("posted", {})[key] = {"run_id": run_id, "slug": slug, "ts": time.time()}
             state.get("failed", {}).pop(key, None)
-        else:
-            state.setdefault("failed", {})[key] = {"run_id": run_id, "slug": slug, "ts": time.time(), "status": item.get("status")}
+        elif not dry_run:
+            state.setdefault("failed", {})[key] = {
+                "run_id": run_id,
+                "slug": slug,
+                "ts": time.time(),
+                "status": item.get("status"),
+                "publish": item.get("publish"),
+                "error": item.get("error"),
+                "platform": platform,
+            }
         _save_state(state_file, state)
         if once:
             return {"processed": 1, "run_id": run_id, "slug": slug}
