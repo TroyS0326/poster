@@ -1,0 +1,31 @@
+{
+  "name": "xeanvi_daily_reels_3_per_day",
+  "output_root": "outputs/queue",
+  "batch_defaults": {
+    "brand": "xeanvi",
+    "template": "mistake",
+    "visual_style": "market_grid",
+    "duration_seconds": 18,
+    "scene_count": 4,
+    "generate_background": true,
+    "generate_voiceover_placeholder": true,
+    "render_mp4": false
+  },
+  "runs": [
+    {"run_id": "day_01", "items": [
+      {"topic": "The cost of breaking your own trading rules", "slug": "breaking_rules"},
+      {"topic": "Why revenge trading destroys consistency", "slug": "revenge_trading"},
+      {"topic": "How to avoid overtrading in choppy markets", "slug": "avoid_overtrading"}
+    ]},
+    {"run_id": "day_02", "items": [
+      {"topic": "Why paper testing protects your process", "slug": "paper_testing"},
+      {"topic": "The value of a pre-market checklist", "slug": "premarket_checklist"},
+      {"topic": "How journaling improves risk control", "slug": "journaling_risk"}
+    ]},
+    {"run_id": "day_03", "items": [
+      {"topic": "What makes a setup A-plus quality", "slug": "aplus_setup"},
+      {"topic": "Why position sizing matters more than entry", "slug": "position_sizing"},
+      {"topic": "How to recover from a red day safely", "slug": "recover_red_day"}
+    ]}
+  ]
+}
