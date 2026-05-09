@@ -1,0 +1,20 @@
+{
+  "brand": "xeanvi",
+  "template": "mistake",
+  "visual_style": "market_grid",
+  "duration_seconds": 18,
+  "scene_count": 4,
+  "generate_background": true,
+  "generate_voiceover_placeholder": true,
+  "render_mp4": false,
+  "items": [
+    {
+      "topic": "The cost of breaking your own trading rules",
+      "slug": "breaking_rules"
+    },
+    {
+      "topic": "Why paper testing protects your process",
+      "slug": "paper_testing"
+    }
+  ]
+}

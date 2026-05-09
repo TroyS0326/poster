@@ -149,3 +149,31 @@ python -m reels.voiceover --input outputs/xeanvi_market_grid_voice.json --output
 ```bash
 python -m reels.generate --input outputs/xeanvi_market_grid_voice.json --output outputs/xeanvi_market_grid_voice.mp4
 ```
+
+## Batch workflow (local-only, no upload/no paid APIs)
+
+Use a batch JSON file to generate multiple local Reel assets in one run:
+
+```bash
+python -m reels.batch --input examples/reels_batch_example.json --output-dir outputs/batch
+```
+
+Batch format (`examples/reels_batch_example.json`) supports top-level defaults and per-item overrides:
+- Defaults: `brand`, `template`, `visual_style`, `duration_seconds`, `scene_count`, `generate_background`, `generate_voiceover_placeholder`, `render_mp4`
+- Each `items[]` entry must include `topic`; optional `slug`; and may override any default field above.
+
+Per-item output paths are predictable:
+- `outputs/batch/<slug>/<slug>.json`
+- `outputs/batch/<slug>/<slug>.png` (if `generate_background=true`)
+- `outputs/batch/<slug>/<slug>.wav` (if `generate_voiceover_placeholder=true`)
+- `outputs/batch/<slug>/<slug>.mp4` (if `render_mp4=true` and render succeeds)
+
+Batch writes a machine-readable summary file at:
+- `outputs/batch/summary.json`
+
+Runtime behavior:
+- If `render_mp4=false`, MP4 rendering is skipped.
+- If `render_mp4=true` and moviepy/ffmpeg is unavailable, that item is marked failed/render_failed and batch processing continues.
+- Compliance guardrails are applied per item topic; failed items do not stop remaining items.
+
+Generated files remain under `outputs/` and are gitignored.

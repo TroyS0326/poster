@@ -101,3 +101,4 @@ A separate module is available for local vertical MP4 reel generation without ch
 - Reels storyboard supports `--visual-style`, and local style backgrounds can be generated with `python -m reels.backgrounds` into `outputs/`.
 
 - Reels supports optional local voiceover metadata and a silent placeholder WAV generator (`python -m reels.voiceover`) with no paid API requirement.
+- Reels also supports batch local asset generation from JSON via `python -m reels.batch --input examples/reels_batch_example.json --output-dir outputs/batch`.
