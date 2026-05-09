@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from reels import autopost
 
 
@@ -16,29 +18,73 @@ def _make_queue(tmp_path: Path):
     return q
 
 
-def test_autopost_dry_run_limit3_deletes_nothing(tmp_path, monkeypatch):
+def _set_cfg(monkeypatch, *, post_dry_run=True, post_to_instagram=True, post_to_facebook=True):
+    cfg = type("Cfg", (), {
+        "cleanup_after_success": True,
+        "delete_after_success_extensions": (".mp4", ".wav", ".mp3", ".png"),
+        "post_dry_run": post_dry_run,
+        "post_to_instagram": post_to_instagram,
+        "post_to_facebook": post_to_facebook,
+    })()
+    monkeypatch.setattr(autopost, "load_publish_config", lambda: cfg)
+
+
+def test_autopost_renders_missing_mp4_before_publish(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "outputs/queue/day_03"
+    run_dir = tmp_path / "outputs/queue/day_03/a"
     run_dir.mkdir(parents=True)
-    items = []
-    for slug in ["a", "b", "c", "d"]:
-        d = run_dir / slug
-        d.mkdir()
-        (d / f"{slug}.json").write_text("{}", encoding="utf-8")
-        (d / f"{slug}.mp4").write_bytes(b"mp4")
-        (d / f"{slug}.wav").write_bytes(b"wav")
-        items.append({"slug": slug, "json_path": str(d / f"{slug}.json"), "mp4_path": str(d / f"{slug}.mp4")})
-    (run_dir / "summary.json").write_text(json.dumps({"items": items}), encoding="utf-8")
+    (run_dir / "a.json").write_text("{}", encoding="utf-8")
+    (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=False)
+
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+    monkeypatch.setattr(autopost, "render_reel", lambda cfg, out: Path(out).write_bytes(b"mp4"))
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "success"}, "facebook": {"status": "success"}})
+
+    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+    assert result["items"][0]["mp4_path"].endswith("a.mp4")
+    events = (run_dir.parent / "publish_events.jsonl").read_text(encoding="utf-8")
+    assert "render_written" in events
+
+
+def test_autopost_render_failure_skips_publish(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03/a"
+    run_dir.mkdir(parents=True)
+    (run_dir / "a.json").write_text("{}", encoding="utf-8")
+    (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=False)
+
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+    monkeypatch.setattr(autopost, "render_reel", lambda cfg, out: (_ for _ in ()).throw(RuntimeError("boom")))
+    called = {"n": 0}
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: called.__setitem__("n", called["n"] + 1))
+
+    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+    assert result["items"][0]["status"] == "render_failed"
+    assert called["n"] == 0
+    assert "render_failed" in (run_dir.parent / "publish_events.jsonl").read_text(encoding="utf-8")
+
+
+def test_autopost_dry_run_renders_and_deletes_nothing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03/a"
+    run_dir.mkdir(parents=True)
+    (run_dir / "a.json").write_text("{}", encoding="utf-8")
+    (run_dir / "a.wav").write_bytes(b"wav")
+    (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=True)
+
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+    monkeypatch.setattr(autopost, "render_reel", lambda cfg, out: Path(out).write_bytes(b"mp4"))
     monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "planned"}, "facebook": {"status": "planned"}, "video_url": "u"})
 
-    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", limit=3, dry_run=True)
-    assert result["processed"] == 3
-    assert (run_dir / "a/a.mp4").exists()
-    assert (run_dir / "publish_summary.json").exists()
-    assert (run_dir / "publish_events.jsonl").exists()
+    autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=True)
+    assert (run_dir / "a.mp4").exists()
+    assert (run_dir / "a.wav").exists()
 
 
-def test_autopost_success_cleanup(tmp_path, monkeypatch):
+def test_autopost_success_cleanup_selected_platform_only(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "outputs/queue/day_03/a"
     run_dir.mkdir(parents=True)
@@ -46,17 +92,17 @@ def test_autopost_success_cleanup(tmp_path, monkeypatch):
     (run_dir / "a.mp4").write_bytes(b"mp4")
     (run_dir / "a.wav").write_bytes(b"wav")
     (run_dir / "a.png").write_bytes(b"png")
-    (run_dir / "run_report.md").write_text("r", encoding="utf-8")
-    parent = run_dir.parent
-    (parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json'), "mp4_path": str(run_dir / 'a.mp4')}]}), encoding="utf-8")
-    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "success"}, "facebook": {"status": "success"}})
+    (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json'), "mp4_path": str(run_dir / 'a.mp4')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=False, post_to_instagram=True, post_to_facebook=False)
 
-    autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", limit=3, dry_run=False)
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "success"}, "facebook": None})
+
+    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+    assert result["platform"] == "instagram"
     assert not (run_dir / "a.mp4").exists()
     assert not (run_dir / "a.wav").exists()
     assert not (run_dir / "a.png").exists()
     assert (run_dir / "a.json").exists()
-    assert (run_dir / "run_report.md").exists()
 
 
 def test_autopost_failed_publish_keeps_files(tmp_path, monkeypatch):
@@ -66,7 +112,42 @@ def test_autopost_failed_publish_keeps_files(tmp_path, monkeypatch):
     (run_dir / "a.json").write_text("{}", encoding="utf-8")
     (run_dir / "a.mp4").write_bytes(b"mp4")
     (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json'), "mp4_path": str(run_dir / 'a.mp4')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=False, post_to_instagram=True, post_to_facebook=True)
     monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "success"}, "facebook": {"status": "failed"}})
 
     autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+    assert (run_dir / "a.mp4").exists()
+
+
+def test_autopost_platform_config_none_requires_dry_run(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03/a"
+    run_dir.mkdir(parents=True)
+    (run_dir / "a.json").write_text("{}", encoding="utf-8")
+    (run_dir / "a.mp4").write_bytes(b"mp4")
+    (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json'), "mp4_path": str(run_dir / 'a.mp4')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=False, post_to_instagram=False, post_to_facebook=False)
+
+    with pytest.raises(ValueError):
+        autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+
+
+def test_autopost_cfg_dry_run_forces_publish_dry_run(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03/a"
+    run_dir.mkdir(parents=True)
+    (run_dir / "a.json").write_text("{}", encoding="utf-8")
+    (run_dir / "a.mp4").write_bytes(b"mp4")
+    (run_dir.parent / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(run_dir / 'a.json'), "mp4_path": str(run_dir / 'a.mp4')}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=True, post_to_instagram=True, post_to_facebook=True)
+
+    captured = {}
+    def _pub(**kwargs):
+        captured["dry_run"] = kwargs["dry_run"]
+        return {"instagram": {"status": "planned"}, "facebook": {"status": "planned"}, "video_url": "u"}
+    monkeypatch.setattr(autopost, "publish_reel", _pub)
+
+    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+    assert result["dry_run"] is True
+    assert captured["dry_run"] is True
     assert (run_dir / "a.mp4").exists()

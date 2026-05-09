@@ -258,10 +258,21 @@ Generation (`reels.queue`, `reels.batch`, `reels.generate`) creates assets first
 - Set `REELS_PUBLIC_BASE_URL` to your public dashboard URL (for example a Cloudflare tunnel URL).
 - Dry run publish:
   - `python -m reels.publish --input outputs/queue/day_03/example/example.json --video outputs/queue/day_03/example/example.mp4 --platform both --public-base-url https://example.trycloudflare.com --dry-run`
-- Auto-post up to 3/day:
-  - `python -m reels.autopost --queue examples/reels_queue_30_day_3_per_day_example.json --run-id day_03 --public-base-url https://example.trycloudflare.com --limit 3 --dry-run`
+- Auto-post up to 3/day (example dry-run):
+  - `python -m reels.autopost --queue examples/reels_queue_30_day_3_per_day_example.json --run-id day_01 --public-base-url https://YOUR-TUNNEL --limit 3 --dry-run`
+- Real auto-post (set `REELS_POST_DRY_RUN=false` first):
+  - `REELS_POST_DRY_RUN=false python -m reels.autopost --queue examples/reels_queue_30_day_3_per_day_example.json --run-id day_01 --public-base-url https://YOUR-TUNNEL --limit 3`
+
+Autopost behavior:
+- If a summary item has no `mp4_path` (or file missing), autopost automatically renders `<slug>.mp4` from that item JSON before publish.
+- `REELS_POST_DRY_RUN` defaults to `true` and always forces publish dry-run unless explicitly set to `false`.
+- Cleanup happens only after all selected targets succeed:
+  - `platform=both`: Instagram and Facebook must both succeed.
+  - `platform=instagram`: Instagram must succeed.
+  - `platform=facebook`: Facebook must succeed.
+- Dry-run never deletes files.
 
 Cleanup behavior:
-- Deletes heavy files (`.mp4,.wav,.mp3,.png` by default) only if **both** Instagram and Facebook publish succeed.
-- On failure of either platform, files are kept for retry.
+- Deletes heavy files (`.mp4,.wav,.mp3,.png` by default, configurable via `REELS_DELETE_AFTER_SUCCESS_EXTENSIONS`).
+- Always keeps `.json`, summary/report/event files.
 - TryCloudflare URLs can change after tunnel restart; update `REELS_PUBLIC_BASE_URL` accordingly.
