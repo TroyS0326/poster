@@ -2,24 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-BANNED_MARKETING_TERMS = [
-    "guaranteed profit",
-    "guaranteed profits",
-    "guaranteed returns",
-    "guaranteed",
-    "passive income",
-    "make money while you sleep",
-    "get rich",
-    "risk-free",
-    "no risk",
-    "signals that win",
-    "win rate",
-    "100% accurate",
-    "easy money",
-    "financial advice",
-    "buy now",
-    "sell now",
-]
+from reels.compliance import validate_compliance_text
 
 SUPPORTED_VISUAL_STYLES = {
     "fintech_dark",
@@ -28,6 +11,8 @@ SUPPORTED_VISUAL_STYLES = {
     "market_grid",
     "minimal_gradient",
 }
+
+SUPPORTED_VISUAL_BRANDS = {"generic", "xeanvi"}
 
 DEFAULT_VISUAL_STYLE_BY_BRAND = {
     "generic": "minimal_gradient",
@@ -63,6 +48,9 @@ class VisualPromptPack:
 
 
 def resolve_visual_style(brand: str, visual_style: str | None) -> str:
+    if brand not in SUPPORTED_VISUAL_BRANDS:
+        raise ValueError(f"unsupported brand: {brand}")
+
     style = (visual_style or "").strip()
     if not style:
         style = DEFAULT_VISUAL_STYLE_BY_BRAND.get(brand, "minimal_gradient")
@@ -72,6 +60,9 @@ def resolve_visual_style(brand: str, visual_style: str | None) -> str:
 
 
 def build_visual_prompt(style: str, brand: str, topic: str) -> VisualPromptPack:
+    if brand not in SUPPORTED_VISUAL_BRANDS:
+        raise ValueError(f"unsupported brand: {brand}")
+
     if style not in SUPPORTED_VISUAL_STYLES:
         raise ValueError(f"unsupported visual_style: {style}")
 
@@ -86,9 +77,7 @@ def build_visual_prompt(style: str, brand: str, topic: str) -> VisualPromptPack:
 
     image_prompt = f"Vertical 9:16 background, {brand_context}, {prompt_core}, topic context: {topic.strip()}, cinematic but clean, no hype."
 
-    for phrase in BANNED_MARKETING_TERMS:
-        if phrase in image_prompt.lower():
-            raise ValueError(f"image_prompt contains prohibited marketing/compliance phrase: {phrase}")
+    validate_compliance_text(image_prompt, "image_prompt")
 
     negative_prompt = COMMON_NEGATIVE_PROMPT
     for term in REQUIRED_NEGATIVE_TERMS:

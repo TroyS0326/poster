@@ -37,7 +37,7 @@ def generate_background_png(style: str, brand: str, output: Path, size: tuple[in
         img[:, ::60, :] = np.clip(img[:, ::60, :] + 12, 0, 255)
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(img, mode="RGB").save(output)
+    Image.fromarray(img).save(output)
     return output
 
 
