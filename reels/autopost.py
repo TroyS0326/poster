@@ -5,7 +5,11 @@ import json
 from pathlib import Path
 
 from reels.batch import run_batch
+import os
+
 from reels.generate import load_reel_config, render_reel
+from reels.video_assets import load_video_manifest
+from reels.video_renderer import render_video_reel
 from reels.publish import publish_reel
 from reels.publish_config import load_publish_config
 from reels.queue import _build_batch_payload, _resolve_output_root, _select_run, load_queue_input, validate_queue_payload
@@ -99,7 +103,16 @@ def run_autopost(
 
         if not Path(mp4_path).exists():
             try:
-                render_reel(load_reel_config(json_path), mp4_path)
+                renderer = os.getenv("REELS_RENDERER", "video").strip().lower()
+                cfg_obj = load_reel_config(json_path)
+                if renderer == "legacy":
+                    render_reel(cfg_obj, mp4_path)
+                elif renderer == "video":
+                    manifest = os.getenv("REELS_VIDEO_MANIFEST", "assets/reels/video_manifest.json")
+                    clips = load_video_manifest(manifest)
+                    render_video_reel(cfg_obj, mp4_path, clips=clips)
+                else:
+                    raise ValueError(f"Unknown REELS_RENDERER: {renderer}")
                 events.append({"slug": slug, "event": "render_written", "mp4_path": str(mp4_path)})
             except Exception as exc:
                 item_result["status"] = "render_failed"

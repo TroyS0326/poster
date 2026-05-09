@@ -1,0 +1,11 @@
+{
+  "clips": [
+    {
+      "id": "workstation_01",
+      "path": "assets/reels/video_clips/workstation/workstation_01.mp4",
+      "tags": ["workstation", "discipline", "focus", "dark", "trading"],
+      "mood": "focused",
+      "safe_for": ["discipline", "execution", "rules"]
+    }
+  ]
+}
