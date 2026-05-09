@@ -223,3 +223,30 @@ Modes:
 - `--next`: runs first pending run where `<output_root>/<run_id>/summary.json` does not yet exist.
 
 Validation includes invalid JSON, missing/duplicate run IDs, missing items, unknown selected run IDs, strict boolean typing, numeric duration/scene count, compliance checks, duplicate slugs, supported brand/template/visual_style, and voiceover provider/format compatibility. Dry-run does not create output directories or files.
+
+
+## Reels publishing foundation (dry-run first)
+
+Reels generation remains local-only by default and **does not auto-post**. Publishing only happens when you explicitly run `reels.publish`.
+
+Dashboard now exposes generated assets under:
+- `/reels/outputs/<path:filename>`
+- Example: `https://YOUR_TUNNEL_URL/reels/outputs/queue/day_03/execution_rules_before_confidence/execution_rules_before_confidence.mp4`
+
+Set a public base URL for building Meta-fetchable asset URLs:
+- `REELS_PUBLIC_BASE_URL=https://YOUR_TUNNEL_URL`
+
+Optional publish env flags:
+- `REELS_POST_DRY_RUN=true` (default)
+- `REELS_POST_TO_INSTAGRAM=true`
+- `REELS_POST_TO_FACEBOOK=false` (default)
+
+Dry-run command (recommended first):
+```bash
+python -m reels.publish --input outputs/queue/day_03/.../file.json --video outputs/queue/day_03/.../file.mp4 --platform instagram --dry-run --public-base-url https://YOUR_TUNNEL_URL
+```
+
+Instagram real publish command (run only after dry-run + URL reachability checks):
+```bash
+python -m reels.publish --input outputs/queue/day_03/.../file.json --video outputs/queue/day_03/.../file.mp4 --platform instagram --public-base-url https://YOUR_TUNNEL_URL
+```
