@@ -5,7 +5,13 @@ import json
 import os
 from pathlib import Path
 
-from reels.visuals import build_visual_prompt, resolve_visual_style, SUPPORTED_VISUAL_STYLES
+from reels.compliance import BANNED_MARKETING_TERMS, validate_compliance_text
+from reels.visuals import (
+    SUPPORTED_VISUAL_BRANDS,
+    SUPPORTED_VISUAL_STYLES,
+    build_visual_prompt,
+    resolve_visual_style,
+)
 
 DEFAULT_TONE = "direct"
 DEFAULT_DURATION_SECONDS = 18
@@ -14,7 +20,7 @@ DEFAULT_TEMPLATE = "discipline"
 DEFAULT_BRAND = "generic"
 
 SUPPORTED_TEMPLATES = {"discipline", "mistake", "checklist", "myth", "before-after"}
-SUPPORTED_BRANDS = {"generic", "xeanvi"}
+SUPPORTED_BRANDS = SUPPORTED_VISUAL_BRANDS
 
 TONE_STYLES = {
     "direct": "Keep it simple and rule-based.",
@@ -37,38 +43,11 @@ BRAND_PACKS = {
 
 
 
-BANNED_MARKETING_TERMS = [
-    "guaranteed profit",
-    "guaranteed profits",
-    "guaranteed returns",
-    "guaranteed",
-    "passive income",
-    "make money while you sleep",
-    "get rich",
-    "risk-free",
-    "no risk",
-    "signals that win",
-    "win rate",
-    "100% accurate",
-    "easy money",
-    "financial advice",
-    "buy now",
-    "sell now",
-]
-
-
-def _validate_compliance_text(text: str, field_name: str) -> None:
-    normalized = text.lower()
-    for phrase in BANNED_MARKETING_TERMS:
-        if phrase in normalized:
-            raise ValueError(f"{field_name} contains prohibited marketing/compliance phrase: {phrase}")
-
-
 def _validate_storyboard_compliance(payload: dict) -> None:
-    _validate_compliance_text(payload.get("title", ""), "topic")
+    validate_compliance_text(payload.get("title", ""), "topic")
     scenes = payload.get("scenes", [])
     for scene in scenes:
-        _validate_compliance_text(scene.get("text", ""), "generated scene text")
+        validate_compliance_text(scene.get("text", ""), "generated scene text")
 
 
 def _validate_inputs(
@@ -171,8 +150,8 @@ def generate_storyboard(
     audience = (audience or "").strip() or pack["default_audience"]
     call_to_action = (call_to_action or "").strip() or pack["default_cta"]
 
-    _validate_compliance_text(topic, "topic")
-    _validate_compliance_text(call_to_action, "call_to_action")
+    validate_compliance_text(topic, "topic")
+    validate_compliance_text(call_to_action, "call_to_action")
 
     title = f"{topic.strip()}"
     template_lines = _template_lines(template, topic, audience, call_to_action, brand)

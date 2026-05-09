@@ -15,6 +15,7 @@ from reels.visuals import (
 )
 
 
+
 def test_each_visual_style_produces_prompt_data() -> None:
     for style in SUPPORTED_VISUAL_STYLES:
         prompt = build_visual_prompt(style=style, brand="generic", topic="Why rules matter")
@@ -30,6 +31,26 @@ def test_brand_default_visual_styles() -> None:
 def test_unsupported_visual_style_rejected() -> None:
     with pytest.raises(ValueError, match="unsupported visual_style"):
         resolve_visual_style("generic", "invalid_style")
+
+
+def test_unsupported_visual_brand_rejected() -> None:
+    with pytest.raises(ValueError, match="unsupported brand: fakebrand"):
+        resolve_visual_style("fakebrand", "fintech_dark")
+
+
+def test_build_visual_prompt_rejects_unsupported_brand() -> None:
+    with pytest.raises(ValueError, match="unsupported brand: fakebrand"):
+        build_visual_prompt(style="fintech_dark", brand="fakebrand", topic="Rules matter")
+
+
+def test_build_visual_prompt_rejects_banned_topic_phrase() -> None:
+    with pytest.raises(ValueError, match="image_prompt contains prohibited marketing/compliance phrase: buy now"):
+        build_visual_prompt(style="fintech_dark", brand="xeanvi", topic="Buy now to win")
+
+
+def test_background_generator_rejects_unsupported_brand(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="unsupported brand: fakebrand"):
+        generate_background_png(style="fintech_dark", brand="fakebrand", output=tmp_path / "bg.png")
 
 
 def test_storyboard_output_includes_visual_field() -> None:

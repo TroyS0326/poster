@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from reels.config import load_reel_config
-from reels.storyboard import BRAND_PACKS, BANNED_MARKETING_TERMS, _allocate_scene_durations, _validate_inputs, generate_storyboard
+from reels.compliance import BANNED_MARKETING_TERMS
+from reels.storyboard import BRAND_PACKS, _allocate_scene_durations, _validate_inputs, generate_storyboard
 
 
 def test_duration_allocation_count_matches_scene_count() -> None:
@@ -190,3 +191,10 @@ def test_default_cli_compatible_behavior_still_works(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr + result.stdout
     cfg = load_reel_config(output)
     assert cfg.title
+
+
+def test_no_duplicate_banned_terms_constant_in_modules() -> None:
+    storyboard_text = Path("reels/storyboard.py").read_text(encoding="utf-8")
+    visuals_text = Path("reels/visuals.py").read_text(encoding="utf-8")
+    assert "BANNED_MARKETING_TERMS = [" not in storyboard_text
+    assert "BANNED_MARKETING_TERMS = [" not in visuals_text
