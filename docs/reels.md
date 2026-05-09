@@ -134,6 +134,11 @@ python -m reels.voiceover --input outputs/xeanvi_market_grid_voice.json --output
 
 This creates **silent placeholder audio only** for pipeline validation. It is **not real TTS narration**.
 
+Provider architecture now supports:
+- `silent` (default, local/free, no external API; requires `.wav` output)
+- `local_file` (copies `voiceover.audio_path` from storyboard JSON)
+- `edge_tts_optional` (real TTS only when optional `edge-tts` dependency is installed; may fail clearly when unavailable)
+
 ### Voiceover workflow
 
 1. Generate storyboard JSON + PNG background:
@@ -184,3 +189,11 @@ Runtime behavior:
 - Compliance guardrails are applied per item topic; failed items do not stop remaining items.
 
 Generated files remain under `outputs/` and are gitignored.
+
+
+Real-provider example (optional):
+```bash
+python -m reels.voiceover --input outputs/xeanvi_market_grid_voice.json --output outputs/audio/xeanvi_market_grid.mp3 --provider edge_tts_optional --voice en-US-AriaNeural --format mp3
+```
+
+If `--provider edge_tts_optional` is selected, `voiceover.script` is required and compliance-checked before generation.

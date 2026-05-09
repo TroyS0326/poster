@@ -260,3 +260,21 @@ def test_top_level_invalid_boolean_does_not_write_misleading_batch_started(tmp_p
         run_batch(payload, tmp_path)
     events_path = tmp_path / "events.jsonl"
     assert not events_path.exists()
+
+
+def test_batch_unsupported_voiceover_provider_fails_item_cleanly(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_voiceover_placeholder"] = True
+    payload["voiceover_provider"] = "not_real"
+    payload["items"][0]["slug"] = "bad_provider"
+    summary = run_batch(payload, tmp_path)
+    assert summary["items"][0]["status"] == "failed"
+    assert "unsupported voiceover provider" in summary["items"][0]["error"]
+
+
+def test_batch_default_voiceover_provider_remains_silent_wav(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_voiceover_placeholder"] = True
+    payload["items"][0]["slug"] = "default_silent"
+    run_batch(payload, tmp_path)
+    assert (tmp_path / "default_silent" / "default_silent.wav").exists()
