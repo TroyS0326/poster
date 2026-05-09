@@ -19,7 +19,7 @@ from reels.storyboard import (
     generate_storyboard,
 )
 from reels.visuals import resolve_visual_style
-from reels.voiceover import write_silent_wav
+from reels.tts import get_provider
 
 
 def _slugify(value: str) -> str:
@@ -135,6 +135,9 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             payload.get("generate_voiceover_placeholder", False), "generate_voiceover_placeholder"
         ),
         "render_mp4": _ensure_bool(payload.get("render_mp4", False), "render_mp4"),
+        "voiceover_provider": str(payload.get("voiceover_provider", "silent")),
+        "voiceover_voice": payload.get("voiceover_voice"),
+        "voiceover_format": payload.get("voiceover_format"),
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     events_path = output_dir / "events.jsonl"
@@ -223,9 +226,15 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
 
             if generate_voiceover_placeholder:
                 cfg = load_reel_config(json_path)
-                write_silent_wav(wav_path, cfg.duration_seconds)
-                entry["wav_path"] = str(wav_path)
-                _write_event(events_path, {"event": "voiceover_written", "index": idx, "slug": slug, "path": str(wav_path)})
+                voiceover_provider = str(merged.get("voiceover_provider", "silent"))
+                voiceover_voice = merged.get("voiceover_voice")
+                voiceover_format = merged.get("voiceover_format")
+                ext = f".{voiceover_format}" if isinstance(voiceover_format, str) and voiceover_format.strip() else ".wav"
+                voice_output_path = wav_path if ext == ".wav" else item_dir / f"{slug}{ext}"
+                provider = get_provider(voiceover_provider)
+                provider.generate(config=cfg, output=voice_output_path, voice=voiceover_voice, audio_format=voiceover_format)
+                entry["wav_path"] = str(voice_output_path)
+                _write_event(events_path, {"event": "voiceover_written", "index": idx, "slug": slug, "path": str(voice_output_path), "provider": voiceover_provider})
 
             if render_mp4:
                 try:
