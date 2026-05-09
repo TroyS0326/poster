@@ -1,0 +1,5 @@
+{
+  "PROMPT_NODE_ID": {"class_type": "CLIPTextEncode", "inputs": {"text": "replace me"}},
+  "NEGATIVE_PROMPT_NODE_ID": {"class_type": "CLIPTextEncode", "inputs": {"text": "replace me"}},
+  "SEED_NODE_ID": {"class_type": "KSampler", "inputs": {"seed": 1}}
+}

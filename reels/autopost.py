@@ -10,6 +10,8 @@ import os
 from reels.generate import load_reel_config, render_reel
 from reels.video_assets import load_video_manifest
 from reels.video_renderer import render_video_reel
+from reels.video_clip_generation import ensure_scene_video_clips
+from reels.video_provider_config import load_video_provider_config
 from reels.publish import publish_reel
 from reels.publish_config import load_publish_config
 from reels.queue import _build_batch_payload, _resolve_output_root, _select_run, load_queue_input, validate_queue_payload
@@ -108,9 +110,14 @@ def run_autopost(
                 if renderer == "legacy":
                     render_reel(cfg_obj, mp4_path)
                 elif renderer == "video":
+                    provider_cfg = load_video_provider_config()
+                    generated_scene_clips = None
+                    if provider_cfg.provider == "comfy":
+                        storyboard = {"title": getattr(cfg_obj, "title", ""), "scenes": [{"text": s.text} for s in getattr(cfg_obj, "scenes", [])]}
+                        generated_scene_clips = ensure_scene_video_clips(storyboard, item_dir, provider_cfg)
                     manifest = os.getenv("REELS_VIDEO_MANIFEST", "assets/reels/video_manifest.json")
-                    clips = load_video_manifest(manifest)
-                    render_video_reel(cfg_obj, mp4_path, clips=clips)
+                    clips = load_video_manifest(manifest) if provider_cfg.provider != "none" else []
+                    render_video_reel(cfg_obj, mp4_path, clips=clips, generated_scene_clips=generated_scene_clips)
                 else:
                     raise ValueError(f"Unknown REELS_RENDERER: {renderer}")
                 events.append({"slug": slug, "event": "render_written", "mp4_path": str(mp4_path)})
