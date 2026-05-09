@@ -62,6 +62,8 @@ Useful options:
 - `--template` (`discipline`, `mistake`, `checklist`, `myth`, `before-after`; default `discipline`)
 - `--brand` (`generic`, `xeanvi`; default `generic`)
 - `--visual-style` (`fintech_dark`, `workstation`, `abstract_risk`, `market_grid`, `minimal_gradient`; default uses brand pack)
+- `--generate-background` generates a local PNG background and writes storyboard JSON with `background.type=image`
+- `--background-output` optional `.png` path for generated background (default: `outputs/backgrounds/<safe_name>.png`)
 
 Template structures stay concise for vertical overlays and adapt to scene count.
 
@@ -107,12 +109,14 @@ A. Visual prompt workflow (JSON-only):
 2. Use `visual.image_prompt` + `visual.negative_prompt` later with your AI/manual art workflow.
 
 B. Local PNG workflow:
-1. Generate PNG with `reels.backgrounds`.
-2. Manually set storyboard background to image path:
+1. One-command JSON + PNG generation:
 
-```json
-"background": {
-  "type": "image",
-  "path": "outputs/backgrounds/fintech_dark.png"
-}
+```bash
+python -m reels.storyboard --brand xeanvi --template mistake --visual-style market_grid --generate-background --background-output outputs/backgrounds/xeanvi_market_grid.png --topic "The cost of breaking your own trading rules" --output outputs/xeanvi_market_grid.json
+```
+
+2. Render step remains:
+
+```bash
+python -m reels.generate --input outputs/xeanvi_market_grid.json --output outputs/xeanvi_market_grid.mp4
 ```

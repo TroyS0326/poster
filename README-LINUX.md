@@ -96,5 +96,6 @@ A separate module is available for local vertical MP4 reel generation without ch
 - Reels rendering requires `ffmpeg` on PATH for moviepy.
 - Storyboard JSON generator: `python -m reels.storyboard --topic "Why most traders need rules, not motivation" --output outputs/storyboard.json`
 - Storyboard generator also supports template + brand packs, for example: `python -m reels.storyboard --brand xeanvi --template mistake --topic "The cost of breaking your own trading rules" --output outputs/xeanvi_mistake.json`
+- One-command local PNG+JSON storyboard flow: add `--generate-background` (optionally `--background-output outputs/backgrounds/<name>.png`).
 
 - Reels storyboard supports `--visual-style`, and local style backgrounds can be generated with `python -m reels.backgrounds` into `outputs/`.
