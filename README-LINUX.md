@@ -106,3 +106,5 @@ A separate module is available for local vertical MP4 reel generation without ch
 
 - reels.voiceover now supports provider-based TTS (`silent` default, optional `edge_tts_optional`).
 - Reels now includes a local queue CLI (`python -m reels.queue`) for dry-run and next-pending batch scheduling only (no social upload).
+
+For Reels Vast.ai deployment and operations, see docs/vast_reels_deploy.md
