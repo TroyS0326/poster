@@ -86,6 +86,62 @@ def test_dry_run_bad_item_level_boolean_fails(tmp_path: Path) -> None:
     assert not (tmp_path / "out").exists()
 
 
+def test_dry_run_rejects_duration_seconds_bool(tmp_path: Path) -> None:
+    payload = _queue_payload(tmp_path / "out")
+    payload["batch_defaults"]["duration_seconds"] = True
+    queue_path = tmp_path / "queue.json"
+    _write_queue(queue_path, payload)
+    result = _cmd("--input", str(queue_path), "--run-id", "day_01", "--dry-run")
+    assert result.returncode != 0
+    assert "duration_seconds must be numeric" in result.stdout
+    assert not (tmp_path / "out").exists()
+
+
+def test_dry_run_rejects_scene_count_bool(tmp_path: Path) -> None:
+    payload = _queue_payload(tmp_path / "out")
+    payload["batch_defaults"]["scene_count"] = True
+    queue_path = tmp_path / "queue.json"
+    _write_queue(queue_path, payload)
+    result = _cmd("--input", str(queue_path), "--run-id", "day_01", "--dry-run")
+    assert result.returncode != 0
+    assert "scene_count must be numeric" in result.stdout
+    assert not (tmp_path / "out").exists()
+
+
+def test_dry_run_rejects_duration_seconds_zero(tmp_path: Path) -> None:
+    payload = _queue_payload(tmp_path / "out")
+    payload["batch_defaults"]["duration_seconds"] = 0
+    queue_path = tmp_path / "queue.json"
+    _write_queue(queue_path, payload)
+    result = _cmd("--input", str(queue_path), "--run-id", "day_01", "--dry-run")
+    assert result.returncode != 0
+    assert "duration_seconds must be > 0" in result.stdout
+    assert not (tmp_path / "out").exists()
+
+
+def test_dry_run_rejects_scene_count_one(tmp_path: Path) -> None:
+    payload = _queue_payload(tmp_path / "out")
+    payload["batch_defaults"]["scene_count"] = 1
+    queue_path = tmp_path / "queue.json"
+    _write_queue(queue_path, payload)
+    result = _cmd("--input", str(queue_path), "--run-id", "day_01", "--dry-run")
+    assert result.returncode != 0
+    assert "scene_count must be at least 2" in result.stdout
+    assert not (tmp_path / "out").exists()
+
+
+def test_dry_run_rejects_duration_too_short_for_scene_count(tmp_path: Path) -> None:
+    payload = _queue_payload(tmp_path / "out")
+    payload["batch_defaults"]["duration_seconds"] = 5
+    payload["batch_defaults"]["scene_count"] = 4
+    queue_path = tmp_path / "queue.json"
+    _write_queue(queue_path, payload)
+    result = _cmd("--input", str(queue_path), "--run-id", "day_01", "--dry-run")
+    assert result.returncode != 0
+    assert "duration_seconds is too short for the requested scene_count" in result.stdout
+    assert not (tmp_path / "out").exists()
+
+
 def test_dry_run_banned_topic_fails(tmp_path: Path) -> None:
     payload = _queue_payload(tmp_path / "out")
     payload["runs"][0]["items"][0]["topic"] = "Risk-free strategy for guaranteed profits"
