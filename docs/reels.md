@@ -161,6 +161,7 @@ python -m reels.batch --input examples/reels_batch_example.json --output-dir out
 Batch format (`examples/reels_batch_example.json`) supports top-level defaults and per-item overrides:
 - Defaults: `brand`, `template`, `visual_style`, `duration_seconds`, `scene_count`, `generate_background`, `generate_voiceover_placeholder`, `render_mp4`
 - Each `items[]` entry must include `topic`; optional `slug`; and may override any default field above.
+- Boolean fields must be real JSON booleans (`true` / `false`), not strings like `"false"`.
 
 Per-item output paths are predictable:
 - `outputs/batch/<slug>/<slug>.json`

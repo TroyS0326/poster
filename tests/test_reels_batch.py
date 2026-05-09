@@ -107,3 +107,67 @@ def test_empty_items_rejected(tmp_path: Path) -> None:
     payload["items"] = []
     with pytest.raises(ValueError, match="non-empty"):
         run_batch(payload, tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("generate_background", "generate_background must be a boolean"),
+        ("generate_voiceover_placeholder", "generate_voiceover_placeholder must be a boolean"),
+        ("render_mp4", "render_mp4 must be a boolean"),
+    ],
+)
+def test_top_level_string_boolean_rejected(tmp_path: Path, field: str, message: str) -> None:
+    payload = _base_payload()
+    payload[field] = "false"
+    with pytest.raises(ValueError, match=message):
+        run_batch(payload, tmp_path)
+
+
+def test_item_level_string_boolean_override_rejected(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [{"topic": "Why rules matter", "slug": "bad_bool", "render_mp4": "false"}]
+    summary = run_batch(payload, tmp_path)
+    assert summary["items"][0]["status"] == "failed"
+    assert "items[0].render_mp4 must be a boolean" in summary["items"][0]["error"]
+
+
+def test_xeanvi_default_visual_style_is_consistent_for_background_and_storyboard(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload.pop("visual_style")
+    payload["generate_background"] = True
+    payload["items"][0]["slug"] = "style_default"
+    run_batch(payload, tmp_path)
+    storyboard = json.loads((tmp_path / "style_default" / "style_default.json").read_text(encoding="utf-8"))
+    assert storyboard["visual"]["style"] == "fintech_dark"
+    assert (tmp_path / "style_default" / "style_default.png").exists()
+
+
+def test_item_visual_style_override_is_used_consistently(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_background"] = True
+    payload["items"] = [{"topic": "Why rules matter", "slug": "style_override", "visual_style": "workstation"}]
+    run_batch(payload, tmp_path)
+    storyboard = json.loads((tmp_path / "style_override" / "style_override.json").read_text(encoding="utf-8"))
+    assert storyboard["visual"]["style"] == "workstation"
+    assert (tmp_path / "style_override" / "style_override.png").exists()
+
+
+def test_summary_success_includes_topic_and_slug(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"][0]["slug"] = "summary_ok"
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    assert item["status"] == "success"
+    assert item["slug"] == "summary_ok"
+    assert item["topic"] == payload["items"][0]["topic"]
+
+
+def test_summary_failed_item_includes_topic_and_error(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [{"topic": "Topic with bad duration", "slug": "bad_duration", "duration_seconds": "NaN"}]
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    assert item["status"] == "failed"
+    assert item["topic"] == "Topic with bad duration"
+    assert "must be numeric" in item["error"]
