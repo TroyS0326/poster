@@ -5,7 +5,6 @@ import json
 import os
 from pathlib import Path
 
-DEFAULT_AUDIENCE = "retail day traders"
 DEFAULT_TONE = "direct"
 DEFAULT_DURATION_SECONDS = 18
 DEFAULT_SCENE_COUNT = 4
@@ -24,7 +23,7 @@ TONE_STYLES = {
 BRAND_PACKS = {
     "generic": {
         "default_audience": "retail traders",
-        "default_cta": "Save this and review your rules before your next session.",
+        "default_cta": "Save this and review your process before your next session.",
         "background": {"solid": "#101820", "gradient_start": "#101820", "gradient_end": "#1f4068"},
     },
     "xeanvi": {
@@ -33,6 +32,41 @@ BRAND_PACKS = {
         "background": {"solid": "#0d1321", "gradient_start": "#0d1321", "gradient_end": "#1d2d50"},
     },
 }
+
+
+
+BANNED_MARKETING_TERMS = [
+    "guaranteed profit",
+    "guaranteed profits",
+    "guaranteed returns",
+    "guaranteed",
+    "passive income",
+    "make money while you sleep",
+    "get rich",
+    "risk-free",
+    "no risk",
+    "signals that win",
+    "win rate",
+    "100% accurate",
+    "easy money",
+    "financial advice",
+    "buy now",
+    "sell now",
+]
+
+
+def _validate_compliance_text(text: str, field_name: str) -> None:
+    normalized = text.lower()
+    for phrase in BANNED_MARKETING_TERMS:
+        if phrase in normalized:
+            raise ValueError(f"{field_name} contains prohibited marketing/compliance phrase: {phrase}")
+
+
+def _validate_storyboard_compliance(payload: dict) -> None:
+    _validate_compliance_text(payload.get("title", ""), "topic")
+    scenes = payload.get("scenes", [])
+    for scene in scenes:
+        _validate_compliance_text(scene.get("text", ""), "generated scene text")
 
 
 def _validate_inputs(
@@ -117,9 +151,9 @@ def _allocate_scene_durations(duration_seconds: int, scene_count: int) -> list[f
 
 def generate_storyboard(
     topic: str,
-    audience: str = DEFAULT_AUDIENCE,
+    audience: str | None = None,
     tone: str = DEFAULT_TONE,
-    call_to_action: str = "Save this and tighten your trading playbook.",
+    call_to_action: str | None = None,
     duration_seconds: int = DEFAULT_DURATION_SECONDS,
     scene_count: int = DEFAULT_SCENE_COUNT,
     background_type: str = "gradient",
@@ -129,8 +163,11 @@ def generate_storyboard(
     _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand)
 
     pack = BRAND_PACKS[brand]
-    audience = audience or pack["default_audience"]
-    call_to_action = call_to_action.strip() or pack["default_cta"]
+    audience = (audience or "").strip() or pack["default_audience"]
+    call_to_action = (call_to_action or "").strip() or pack["default_cta"]
+
+    _validate_compliance_text(topic, "topic")
+    _validate_compliance_text(call_to_action, "call_to_action")
 
     title = f"{topic.strip()}"
     template_lines = _template_lines(template, topic, audience, call_to_action, brand)
@@ -144,7 +181,7 @@ def generate_storyboard(
         background["color"] = bg["solid"]
         background["color_end"] = bg["solid"]
 
-    return {
+    payload = {
         "title": title,
         "duration_seconds": duration_seconds,
         "size": [1080, 1920],
@@ -153,14 +190,16 @@ def generate_storyboard(
         "scenes": scenes,
         "voiceover": {"enabled": False, "provider": "", "audio_path": ""},
     }
+    _validate_storyboard_compliance(payload)
+    return payload
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate reel storyboard JSON from a topic")
     parser.add_argument("--topic", required=True, help="Reel topic/angle")
-    parser.add_argument("--audience", default=DEFAULT_AUDIENCE, help="Target audience")
+    parser.add_argument("--audience", default=None, help="Target audience")
     parser.add_argument("--tone", default=DEFAULT_TONE, help="Tone style")
-    parser.add_argument("--call-to-action", default="Save this and tighten your trading playbook.")
+    parser.add_argument("--call-to-action", default=None)
     parser.add_argument("--duration-seconds", type=int, default=DEFAULT_DURATION_SECONDS)
     parser.add_argument("--scene-count", type=int, default=DEFAULT_SCENE_COUNT)
     parser.add_argument("--background-type", default="gradient", help="solid or gradient")
