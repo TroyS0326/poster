@@ -219,7 +219,7 @@ Queue format (`examples/reels_queue_example.json`):
 Modes:
 - `--list-runs`: prints all run IDs with item counts.
 - `--run-id <id>`: runs exactly one queue run to `<output_root>/<run_id>/`.
-- `--run-id <id> --dry-run`: validates and prints planned output paths without writing files.
+- `--run-id <id> --dry-run`: validates the fully derived batch payload (defaults + per-item overrides) and prints planned output paths without writing files.
 - `--next`: runs first pending run where `<output_root>/<run_id>/summary.json` does not yet exist.
 
-Validation includes invalid JSON, missing/duplicate run IDs, missing items, and unknown selected run IDs. Item topics are still validated by batch compliance checks.
+Validation includes invalid JSON, missing/duplicate run IDs, missing items, unknown selected run IDs, strict boolean typing, numeric duration/scene count, compliance checks, duplicate slugs, supported brand/template/visual_style, and voiceover provider/format compatibility. Dry-run does not create output directories or files.

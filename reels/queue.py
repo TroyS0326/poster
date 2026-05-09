@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from reels.batch import run_batch
+from reels.batch import plan_batch, run_batch
 
 DEFAULT_OUTPUT_ROOT = "outputs/queue"
 
@@ -77,7 +77,10 @@ def run_queue(payload: dict[str, Any], *, run_id: str, dry_run: bool = False) ->
     batch_payload = _build_batch_payload(payload, run)
     output_dir = _resolve_output_root(payload) / run_id
     if dry_run:
-        print(f"dry_run=true run_id={run_id} output_dir={output_dir} item_count={len(run['items'])}")
+        plan = plan_batch(batch_payload, output_dir)
+        print(f"dry_run=true run_id={run_id} output_dir={plan['output_dir']} item_count={plan['item_count']}")
+        for item in plan["items"]:
+            print(f"planned_item slug={item['slug']} json_path={item['json_path']}")
         return None
     return run_batch(batch_payload, output_dir)
 
