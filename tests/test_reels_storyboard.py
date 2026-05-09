@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -205,6 +206,11 @@ def test_storyboard_background_image_path_override() -> None:
     assert payload["background"]["path"] == "outputs/backgrounds/a.png"
 
 
+def test_storyboard_background_image_path_non_png_rejected() -> None:
+    with pytest.raises(ValueError, match="background_image_path must end with .png"):
+        generate_storyboard(topic="Rules matter", background_image_path="outputs/backgrounds/a.jpg")
+
+
 def test_image_background_storyboard_loads_config(tmp_path: Path) -> None:
     bg = tmp_path / "bg.png"
     bg.write_bytes(b"fake")
@@ -242,16 +248,29 @@ def test_cli_generate_background_creates_json_and_png(tmp_path: Path) -> None:
 
 def test_cli_generate_background_default_path(tmp_path: Path) -> None:
     output = tmp_path / "storyboard.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(repo_root) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
     result = subprocess.run(
         [sys.executable, "-m", "reels.storyboard", "--brand", "xeanvi", "--template", "mistake", "--visual-style", "market_grid", "--generate-background", "--topic", "Topic", "--output", str(output)],
-        check=False, capture_output=True, text=True,
+        check=False, capture_output=True, text=True, cwd=tmp_path, env=env,
     )
     assert result.returncode == 0, result.stderr + result.stdout
     payload = json.loads(output.read_text(encoding="utf-8"))
     bg_path = Path(payload["background"]["path"])
     assert payload["background"]["type"] == "image"
     assert str(bg_path).startswith("outputs/backgrounds/")
-    assert bg_path.exists()
+    assert (tmp_path / bg_path).exists()
+
+
+def test_cli_background_output_requires_generate_background(tmp_path: Path) -> None:
+    output = tmp_path / "storyboard.json"
+    result = subprocess.run(
+        [sys.executable, "-m", "reels.storyboard", "--topic", "Topic", "--background-output", str(tmp_path / "out.png"), "--output", str(output)],
+        check=False, capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "background-output requires --generate-background" in (result.stdout + result.stderr)
 
 
 def test_cli_background_output_non_png_fails(tmp_path: Path) -> None:
