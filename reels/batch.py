@@ -86,7 +86,9 @@ def _build_summary(output_dir: Path, items: list[dict[str, Any]]) -> dict[str, A
 
 
 def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
-    skipped_render_count = sum(1 for item in summary["items"] if not item.get("mp4_path"))
+    skipped_render_count = sum(
+        1 for item in summary["items"] if item.get("status") == "success" and item.get("render_requested") is False
+    )
     lines = [
         "# Batch Run Report",
         "",
@@ -118,15 +120,9 @@ def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
 
 
 def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    events_path = output_dir / "events.jsonl"
-    if events_path.exists():
-        events_path.unlink()
-
     items = payload.get("items")
     if not isinstance(items, list) or not items:
         raise ValueError("items must be a non-empty list")
-    _write_event(events_path, {"event": "batch_started", "output_dir": str(output_dir), "total_items": len(items)})
 
     defaults = {
         "brand": payload.get("brand", DEFAULT_BRAND),
@@ -140,6 +136,11 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         ),
         "render_mp4": _ensure_bool(payload.get("render_mp4", False), "render_mp4"),
     }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    events_path = output_dir / "events.jsonl"
+    if events_path.exists():
+        events_path.unlink()
+    _write_event(events_path, {"event": "batch_started", "output_dir": str(output_dir), "total_items": len(items)})
 
     seen_slugs: set[str] = set()
     summary_items: list[dict[str, Any]] = []
@@ -170,6 +171,7 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 merged.get("generate_voiceover_placeholder", False), f"items[{idx}].generate_voiceover_placeholder"
             )
             render_mp4 = _ensure_bool(merged.get("render_mp4", False), f"items[{idx}].render_mp4")
+            entry["render_requested"] = render_mp4
             duration_seconds = _int_or_raise(merged.get("duration_seconds"), f"items[{idx}].duration_seconds")
             scene_count = _int_or_raise(merged.get("scene_count"), f"items[{idx}].scene_count")
             brand = str(merged.get("brand"))
@@ -189,6 +191,7 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             if generate_background:
                 generate_background_png(style=resolved_style, brand=brand, output=png_path)
                 entry["png_path"] = str(png_path)
+                _write_event(events_path, {"event": "background_written", "index": idx, "slug": slug, "path": str(png_path)})
                 storyboard = generate_storyboard(
                     topic=topic,
                     duration_seconds=duration_seconds,
@@ -232,8 +235,6 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 except RuntimeError as exc:
                     entry["status"] = "render_failed"
                     entry["error"] = str(exc)
-            if entry.get("png_path"):
-                _write_event(events_path, {"event": "background_written", "index": idx, "slug": slug, "path": entry["png_path"]})
             _write_event(events_path, {"event": "item_completed", "index": idx, "slug": slug, "status": entry["status"]})
             summary_items.append(entry)
         except Exception as exc:

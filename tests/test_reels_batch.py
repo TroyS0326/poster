@@ -188,6 +188,38 @@ def test_run_report_created_with_slug_and_status(tmp_path: Path) -> None:
     assert "success" in report_text
 
 
+def test_skipped_render_count_only_counts_success_without_render(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = _base_payload()
+    payload["render_mp4"] = False
+    payload["items"] = [
+        {"topic": "Success without render", "slug": "ok_skip", "render_mp4": False},
+        {"topic": "Bad bool value", "slug": "bad_bool", "render_mp4": "false"},
+        {"topic": "Render requested fails", "slug": "render_fail", "render_mp4": True},
+    ]
+
+    def _raise_render(*args, **kwargs):
+        raise RuntimeError("ffmpeg unavailable")
+
+    monkeypatch.setattr("reels.batch.render_reel", _raise_render)
+    summary = run_batch(payload, tmp_path)
+    report_text = (tmp_path / "run_report.md").read_text(encoding="utf-8")
+    assert summary["success_count"] == 1
+    assert summary["failed_count"] == 1
+    assert summary["render_failed_count"] == 1
+    assert "- skipped_render_count: 1" in report_text
+
+
+def test_summary_item_includes_render_requested(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [
+        {"topic": "No render", "slug": "no_render", "render_mp4": False},
+        {"topic": "With render requested", "slug": "render_req", "render_mp4": True},
+    ]
+    summary = run_batch(payload, tmp_path)
+    assert summary["items"][0]["render_requested"] is False
+    assert summary["items"][1]["render_requested"] is True
+
+
 def test_events_log_created_with_batch_and_item_events(tmp_path: Path) -> None:
     payload = _base_payload()
     payload["items"][0]["slug"] = "event_ok"
@@ -209,3 +241,22 @@ def test_events_log_contains_item_failed_for_bad_item(tmp_path: Path) -> None:
     events_path = tmp_path / "events.jsonl"
     lines = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert any(line["event"] == "item_failed" for line in lines)
+
+
+def test_background_written_event_order(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_background"] = True
+    payload["items"][0]["slug"] = "event_order"
+    run_batch(payload, tmp_path)
+    lines = [json.loads(line) for line in (tmp_path / "events.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    item_events = [line["event"] for line in lines if line.get("slug") == "event_order"]
+    assert item_events.index("item_started") < item_events.index("background_written") < item_events.index("storyboard_written")
+
+
+def test_top_level_invalid_boolean_does_not_write_misleading_batch_started(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["generate_background"] = "false"
+    with pytest.raises(ValueError, match="generate_background must be a boolean"):
+        run_batch(payload, tmp_path)
+    events_path = tmp_path / "events.jsonl"
+    assert not events_path.exists()
