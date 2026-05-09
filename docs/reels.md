@@ -305,3 +305,23 @@ python -m reels.scheduler --queue examples/reels_queue_30_day_3_per_day_example.
 ```
 
 Scene-aware visuals are now generated per scene (for example `scene_01.png`) and used by the renderer with zoom + readability overlay. Cleanup behavior remains publish-success only.
+
+## 2026 Motion/Template Renderer Upgrade
+
+The reel renderer is now scene-motion driven (not static slide composition):
+- Scene-aware background selection prefers per-scene generated image assets and reuses the best successful scene image as fallback.
+- Premium XeanVI visual system modules live under `reels/design_system.py`, `reels/motion_styles.py`, and `reels/typography.py`.
+- Layout templates are selected per scene (`bold_center_statement`, `left_text_right_visual`, `hero_visual_with_caption_band`, etc.) with text-safe zones.
+- Kinetic typography now reveals lines progressively and applies keyword emphasis colors for risk/discipline language.
+- Overlay language includes data-grid lines, branded micro-label bars, dark readability bands, and subtle HUD styling.
+- Scene prompts in `reels/scene_images.py` now include topic, tone, scene meaning, subject/action, composition guidance, lighting/mood, and explicit "no embedded text" instructions.
+
+Scheduler model is unchanged:
+- `python -m reels.scheduler` still processes one reel every 8 hours by default (`REELS_POST_INTERVAL_HOURS=8`).
+- State file prevents duplicate posting and keeps restart-safe behavior.
+- Cleanup safety remains: heavy generated files are only cleaned after successful publish in autopost flow.
+
+Dry-run and real-mode examples:
+- Dry-run once: `python -m reels.scheduler --queue examples/reels_queue_example.json --public-base-url https://YOUR_URL --once --dry-run`
+- Real once: `python -m reels.scheduler --queue examples/reels_queue_example.json --public-base-url https://YOUR_URL --once`
+- Long-running 8-hour loop: `python -m reels.scheduler --queue examples/reels_queue_example.json --public-base-url https://YOUR_URL`

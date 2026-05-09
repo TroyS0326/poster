@@ -5,6 +5,9 @@ import os
 from pathlib import Path
 
 from reels.config import ReelConfig, load_reel_config
+from reels.design_system import PALETTES, choose_layout
+from reels.motion_styles import choose_motion
+from reels.typography import emphasis_color, load_font
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -25,35 +28,17 @@ def _make_gradient_frame(size: tuple[int, int], top: str, bottom: str):
     return Image.fromarray(frame, mode="RGB")
 
 
-def _load_font(height: int, size_ratio: float, bold: bool):
-    from PIL import ImageFont
-
-    target_size = max(18, int(height * size_ratio))
-    font_candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]
-    for font_path in font_candidates:
-        if Path(font_path).exists():
-            return ImageFont.truetype(font_path, target_size)
-    return ImageFont.load_default()
-
-
 def _load_background(config: ReelConfig):
     from PIL import Image
 
-    size = config.size
     bg = config.background
     if bg.type == "gradient":
-        return _make_gradient_frame(size, bg.color, bg.color_end)
-
+        return _make_gradient_frame(config.size, bg.color, bg.color_end)
     if bg.type == "image" and bg.path:
         p = Path(bg.path)
-        if not p.exists():
-            raise ValueError(f"background.path does not exist: {p}")
-        return Image.open(p).convert("RGB").resize(size)
-
-    return Image.new("RGB", size, _hex_to_rgb(bg.color))
+        if p.exists():
+            return Image.open(p).convert("RGB").resize(config.size)
+    return Image.new("RGB", config.size, _hex_to_rgb(bg.color))
 
 
 def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
@@ -61,10 +46,9 @@ def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
     lines: list[str] = []
     current = ""
     for word in words:
-        candidate = f"{current} {word}".strip()
-        box = draw.textbbox((0, 0), candidate, font=font)
-        if box[2] <= max_width or not current:
-            current = candidate
+        cand = f"{current} {word}".strip()
+        if draw.textbbox((0, 0), cand, font=font)[2] <= max_width or not current:
+            current = cand
         else:
             lines.append(current)
             current = word
@@ -75,118 +59,91 @@ def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
 
 def _scene_for_time(config: ReelConfig, t: float):
     elapsed = 0.0
-    for scene in config.scenes:
+    for i, scene in enumerate(config.scenes):
         elapsed += scene.duration
         if t < elapsed:
-            return scene
-    return config.scenes[-1]
-
-
-def _scene_start_time(config: ReelConfig, target_scene) -> float:
-    elapsed = 0.0
-    for scene in config.scenes:
-        if scene is target_scene:
-            return elapsed
-        elapsed += scene.duration
-    return 0.0
+            return i, scene, elapsed - scene.duration
+    return len(config.scenes)-1, config.scenes[-1], max(0.0, config.duration_seconds - config.scenes[-1].duration)
 
 
 def render_reel(config: ReelConfig, output_path: str | Path) -> None:
-    try:
-        import numpy as np
-        from PIL import ImageDraw
-        from moviepy import AudioFileClip, VideoClip
-    except ImportError as exc:
-        raise RuntimeError(
-            "moviepy and ffmpeg are required. Install requirements and ensure ffmpeg is on PATH"
-        ) from exc
+    import numpy as np
+    from PIL import Image, ImageDraw
+    from moviepy import AudioFileClip, VideoClip
 
-    out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-
+    out = Path(output_path); out.parent.mkdir(parents=True, exist_ok=True)
     w, h = config.size
-    margin = int(w * 0.08)
-    text_width = w - (margin * 2)
+    palette = PALETTES["xeanvi_dark"]
+    title_font = load_font(max(34, int(h * 0.05)), bold=True)
+    body_font = load_font(max(28, int(h * 0.036)), bold=False)
+    micro_font = load_font(max(20, int(h * 0.021)), bold=False)
 
-    font_title = _load_font(h, 0.05, bold=True)
-    font_body = _load_font(h, 0.042, bold=False)
-    title_spacing = max(10, int(h * 0.012))
-    body_spacing = max(10, int(h * 0.01))
-
-    base_bg = _load_background(config)
-    scene_bg = {}
+    default_bg = _load_background(config)
+    scene_bg: dict[int, Image.Image] = {}
+    best_fallback = default_bg.copy()
     for i, sc in enumerate(config.scenes):
         if sc.image_path and Path(sc.image_path).exists():
-            from PIL import Image
-            scene_bg[i] = Image.open(sc.image_path).convert("RGB").resize((w, h))
+            img = Image.open(sc.image_path).convert("RGB").resize((w, h))
+            scene_bg[i] = img
+            best_fallback = img
 
     def make_frame(t: float):
-        scene = _scene_for_time(config, t)
-        frame = base_bg.copy()
-        scene_idx = config.scenes.index(scene)
-        if scene_idx in scene_bg:
-            frame = scene_bg[scene_idx].copy()
-        elif scene_bg:
-            frame = next(iter(scene_bg.values())).copy()
+        idx, scene, start = _scene_for_time(config, t)
+        progress = min(1.0, max(0.0, (t - start) / max(scene.duration, 0.001)))
+        motion = choose_motion(scene.text)
+        layout = choose_layout(idx, scene.text)
+        base = scene_bg.get(idx, best_fallback).copy()
 
-        progress = (t - _scene_start_time(config, scene)) / max(scene.duration, 0.001)
-        zoom = 1.0 + 0.07 * max(0.0, min(1.0, progress))
+        # motion
+        zoom = motion.zoom_start + (motion.zoom_end - motion.zoom_start) * progress
         zw, zh = int(w / zoom), int(h / zoom)
-        ox, oy = (w - zw) // 2, (h - zh) // 2
-        frame = frame.crop((ox, oy, ox + zw, oy + zh)).resize((w, h))
+        ox = int((w - zw) * (0.5 + motion.pan_x * (progress - 0.5)))
+        oy = int((h - zh) * (0.5 + motion.pan_y * (progress - 0.5)))
+        base = base.crop((max(0, ox), max(0, oy), max(0, ox) + zw, max(0, oy) + zh)).resize((w, h))
 
-        draw = ImageDraw.Draw(frame, "RGBA")
-        draw.rectangle((0, int(h*0.5), w, h), fill=(0,0,0,95))
-        title_lines = _wrap_text(draw, config.title, font_title, text_width)
-        scene_lines = _wrap_text(draw, scene.text, font_body, text_width)
+        draw = ImageDraw.Draw(base, "RGBA")
+        # premium overlays
+        for y in range(0, h, 90):
+            draw.line((0, y, w, y), fill=(60, 120, 180, 24), width=1)
+        for x in range(0, w, 120):
+            draw.line((x, 0, x, h), fill=(40, 170, 150, 18), width=1)
+        draw.rectangle((0, int(h * 0.64), w, h), fill=(5, 8, 14, 155))
+        draw.rectangle((int(w*0.06), int(h*0.08), int(w*0.94), int(h*0.14)), fill=(10, 26, 45, 110))
+        draw.text((int(w*0.08), int(h*0.095)), "XEANVI // DISCIPLINE ENGINE", font=micro_font, fill=(140, 201, 255))
 
-        y = int(h * 0.12)
-        for line in title_lines:
-            draw.text(
-                (margin, y),
-                line,
-                fill=(255, 255, 255),
-                font=font_title,
-                stroke_width=max(1, int(h * 0.0025)),
-                stroke_fill=(0, 0, 0),
-            )
-            y += font_title.size + title_spacing
+        # text animation: stagger line reveal
+        title_lines = _wrap_text(draw, config.title, title_font, int(w * 0.84))
+        scene_lines = _wrap_text(draw, scene.text, body_font, int(w * 0.84))
+        show_title_lines = max(1, int(progress * len(title_lines) + 0.5))
+        show_scene_lines = max(1, int(progress * len(scene_lines) + 0.2))
 
-        y = int(h * 0.58)
-        for line in scene_lines:
-            draw.text(
-                (margin, y),
-                line,
-                fill=(255, 255, 255),
-                font=font_body,
-                stroke_width=max(2, int(h * 0.0025)),
-                stroke_fill=(0, 0, 0),
-            )
-            y += font_body.size + body_spacing
+        tx = int(w * 0.08) if "left" in layout else int(w * 0.12)
+        ty = int(h * 0.18)
+        for ln in title_lines[:show_title_lines]:
+            draw.text((tx, ty), ln, font=title_font, fill=palette.text)
+            ty += title_font.size + 8
+        sy = int(h * 0.68)
+        for ln in scene_lines[:show_scene_lines]:
+            cursor_x = tx
+            for word in ln.split():
+                color = emphasis_color(word, palette)
+                draw.text((cursor_x, sy), word + " ", font=body_font, fill=color)
+                cursor_x += draw.textbbox((0,0), word + " ", font=body_font)[2]
+            sy += body_font.size + 6
 
-        return np.array(frame)
+        return np.array(base)
 
     clip = VideoClip(frame_function=make_frame, duration=config.duration_seconds)
-
-    if config.voiceover.enabled and config.voiceover.audio_path:
-        audio_path = Path(config.voiceover.audio_path)
-        if audio_path.exists():
-            clip = clip.with_audio(AudioFileClip(str(audio_path)))
-
-    try:
-        clip.write_videofile(str(out), codec="libx264", audio_codec="aac", fps=config.fps)
-    except OSError as exc:
-        raise RuntimeError(
-            "Failed to render video. Ensure ffmpeg is installed and accessible on PATH"
-        ) from exc
+    if config.voiceover.enabled and config.voiceover.audio_path and Path(config.voiceover.audio_path).exists():
+        clip = clip.with_audio(AudioFileClip(config.voiceover.audio_path))
+    clip.write_videofile(str(out), codec="libx264", audio_codec="aac", fps=config.fps)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate vertical MP4 reels from JSON config")
-    parser.add_argument("--input", required=True, help="Path to reel config JSON")
-    parser.add_argument("--output", required=True, help="Output MP4 path")
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
     args = parser.parse_args()
-
     try:
         config = load_reel_config(args.input)
         render_reel(config, args.output)
@@ -196,7 +153,6 @@ def main() -> int:
     except RuntimeError as exc:
         print(f"ERROR: {exc}")
         return 3
-
     print(f"Reel generated: {os.path.abspath(args.output)}")
     return 0
 

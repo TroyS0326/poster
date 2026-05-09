@@ -6,7 +6,7 @@ from reels.scene_images import scene_prompt, generate_scene_images
 
 def test_scene_prompt_specific():
     p = scene_prompt('revenge trading','Title','stop emotional entries','premium_editorial_trading').lower()
-    assert 'revenge trading' in p and 'emotional' in p and 'negative space' in p
+    assert 'revenge trading' in p and 'emotional tone' in p and 'no embedded text' in p and 'text-safe' in p
 
 
 def test_scene_image_fallback_reuse(tmp_path, monkeypatch):
