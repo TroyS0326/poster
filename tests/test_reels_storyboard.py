@@ -90,3 +90,47 @@ def test_output_structure_fields_present() -> None:
     payload = generate_storyboard(topic="Paper testing builds confidence")
     expected_fields = {"title", "scenes", "background", "duration_seconds", "fps", "size"}
     assert expected_fields.issubset(payload.keys())
+
+
+@pytest.mark.parametrize("template", ["discipline", "mistake", "checklist", "myth", "before-after"])
+def test_each_template_produces_loadable_config(tmp_path: Path, template: str) -> None:
+    payload = generate_storyboard(topic="Why rules matter", template=template)
+    path = tmp_path / f"{template}.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    cfg = load_reel_config(path)
+    assert len(cfg.scenes) == 4
+
+
+@pytest.mark.parametrize("brand", ["generic", "xeanvi"])
+def test_each_brand_produces_loadable_config(tmp_path: Path, brand: str) -> None:
+    payload = generate_storyboard(topic="Risk controls first", brand=brand)
+    path = tmp_path / f"{brand}.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    cfg = load_reel_config(path)
+    assert cfg.title
+
+
+def test_unsupported_template_rejected() -> None:
+    with pytest.raises(ValueError, match="unsupported template"):
+        generate_storyboard(topic="Topic", template="unknown")
+
+
+def test_unsupported_brand_rejected() -> None:
+    with pytest.raises(ValueError, match="unsupported brand"):
+        generate_storyboard(topic="Topic", brand="unknown")
+
+
+def test_xeanvi_brand_uses_safe_language() -> None:
+    payload = generate_storyboard(topic="Why rules matter", brand="xeanvi", template="mistake")
+    combined = " ".join(scene["text"] for scene in payload["scenes"]).lower()
+    assert "rule-based" in combined
+    assert "playbook" in combined or "validation" in combined
+    banned = ["guaranteed", "passive income", "make money while you sleep", "signals that win"]
+    assert not any(term in combined for term in banned)
+
+
+@pytest.mark.parametrize("scene_count", [2, 3, 4, 6])
+def test_generated_scene_count_matches_request(scene_count: int) -> None:
+    payload = generate_storyboard(topic="Topic", template="checklist", scene_count=scene_count)
+    assert len(payload["scenes"]) == scene_count
+    assert all(scene["text"].strip() for scene in payload["scenes"])
