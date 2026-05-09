@@ -92,3 +92,6 @@ A separate module is available for local vertical MP4 reel generation without ch
 - Command: `python -m reels.generate --input reels_config_example.json --output outputs/reel_example.mp4`
 - Docs: `docs/reels.md`
 - Output videos are generated under `outputs/` and are gitignored.
+- Reels generator backgrounds: `background.type` supports `solid`, `gradient`, and `image` only (no video backgrounds yet).
+- Reels rendering requires `ffmpeg` on PATH for moviepy.
+

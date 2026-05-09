@@ -8,13 +8,13 @@ This repo now includes a separate Reels generator module that does not change ex
 pip install -r requirements.txt
 ```
 
-Video rendering requires ffmpeg available on PATH because moviepy uses it under the hood.
+Video rendering requires ffmpeg available on PATH because moviepy uses it under the hood. If moviepy/ffmpeg is missing, the command exits with a clear error message.
 
 ## Example config
 
 Use `reels_config_example.json` as a starting point:
 - `size` defaults to vertical `[1080, 1920]`
-- `background.type` can be `solid`, `gradient`, or `image`
+- `background.type` supports only `solid`, `gradient`, or `image` (video backgrounds are not supported yet)
 - `scenes` defines timed caption lines
 - `voiceover` is optional; if not configured or file missing, video still renders silently
 
@@ -27,7 +27,8 @@ python -m reels.generate --input reels_config_example.json --output outputs/reel
 ## Notes
 
 - Generated files in `outputs/` are gitignored and should not be committed.
-- Missing input file, invalid JSON, invalid durations, and missing rendering dependency are handled with clear error messages and non-zero exit codes.
+- Missing input file, invalid JSON, invalid colors, invalid scene/background values, and missing rendering dependencies are handled with clear error messages and non-zero exit codes.
+- If scene durations are shorter than `duration_seconds`, the final scene is held until the configured end time.
 
 ## Future optional extensions
 

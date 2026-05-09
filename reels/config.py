@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+ALLOWED_BACKGROUNDS = {"solid", "gradient", "image"}
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,12 @@ def _require(data: dict[str, Any], key: str) -> Any:
     return data[key]
 
 
+def _validate_hex_color(value: str, field_name: str) -> str:
+    if not isinstance(value, str) or not HEX_COLOR_RE.fullmatch(value.strip()):
+        raise ValueError(f"{field_name} must be a valid #RRGGBB hex color")
+    return value.strip()
+
+
 def load_reel_config(path: str | Path) -> ReelConfig:
     path_obj = Path(path)
     if not path_obj.exists():
@@ -58,28 +68,51 @@ def load_reel_config(path: str | Path) -> ReelConfig:
     if not title:
         raise ValueError("title must not be empty")
 
-    duration_seconds = float(_require(raw, "duration_seconds"))
+    try:
+        duration_seconds = float(_require(raw, "duration_seconds"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("duration_seconds must be numeric and > 0") from exc
     if duration_seconds <= 0:
-        raise ValueError("duration_seconds must be > 0")
+        raise ValueError("duration_seconds must be numeric and > 0")
 
     size_raw = raw.get("size", [1080, 1920])
     if not isinstance(size_raw, list) or len(size_raw) != 2:
         raise ValueError("size must be [width, height]")
-    width, height = int(size_raw[0]), int(size_raw[1])
+    try:
+        width, height = int(size_raw[0]), int(size_raw[1])
+    except (TypeError, ValueError) as exc:
+        raise ValueError("size must contain two positive integers") from exc
     if width <= 0 or height <= 0:
-        raise ValueError("size values must be > 0")
+        raise ValueError("size must contain two positive integers")
 
-    fps = int(raw.get("fps", 24))
+    fps_raw = raw.get("fps", 24)
+    try:
+        fps = int(fps_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("fps must be numeric and > 0") from exc
     if fps <= 0:
-        raise ValueError("fps must be > 0")
+        raise ValueError("fps must be numeric and > 0")
 
     bg_raw = raw.get("background", {})
-    background = BackgroundConfig(
-        type=str(bg_raw.get("type", "solid")),
-        color=str(bg_raw.get("color", "#111111")),
-        color_end=str(bg_raw.get("color_end", "#222222")),
-        path=bg_raw.get("path"),
-    )
+    if not isinstance(bg_raw, dict):
+        raise ValueError("background must be an object")
+
+    bg_type = str(bg_raw.get("type", "solid")).strip().lower()
+    if bg_type not in ALLOWED_BACKGROUNDS:
+        raise ValueError("background.type must be one of: solid, gradient, image")
+
+    color = _validate_hex_color(str(bg_raw.get("color", "#111111")), "background.color")
+    color_end = _validate_hex_color(str(bg_raw.get("color_end", "#222222")), "background.color_end")
+
+    bg_path_raw = bg_raw.get("path")
+    bg_path = str(bg_path_raw).strip() if bg_path_raw is not None else None
+    if bg_type == "image":
+        if not bg_path:
+            raise ValueError("background.path is required when background.type is 'image'")
+        if not Path(bg_path).exists():
+            raise ValueError(f"background.path does not exist: {bg_path}")
+
+    background = BackgroundConfig(type=bg_type, color=color, color_end=color_end, path=bg_path)
 
     scenes_raw = _require(raw, "scenes")
     if not isinstance(scenes_raw, list) or not scenes_raw:
@@ -88,12 +121,20 @@ def load_reel_config(path: str | Path) -> ReelConfig:
     scenes: list[SceneConfig] = []
     total_scene_duration = 0.0
     for idx, scene in enumerate(scenes_raw):
+        if not isinstance(scene, dict):
+            raise ValueError(f"scene[{idx}] must be an object")
+
         text = str(scene.get("text", "")).strip()
-        duration = float(scene.get("duration", 0))
         if not text:
             raise ValueError(f"scene[{idx}] text must not be empty")
+
+        try:
+            duration = float(scene.get("duration", 0))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"scene[{idx}] duration must be numeric and > 0") from exc
         if duration <= 0:
-            raise ValueError(f"scene[{idx}] duration must be > 0")
+            raise ValueError(f"scene[{idx}] duration must be numeric and > 0")
+
         scenes.append(SceneConfig(text=text, duration=duration))
         total_scene_duration += duration
 
@@ -101,6 +142,8 @@ def load_reel_config(path: str | Path) -> ReelConfig:
         raise ValueError("sum of scene durations cannot exceed duration_seconds")
 
     voice_raw = raw.get("voiceover", {})
+    if not isinstance(voice_raw, dict):
+        raise ValueError("voiceover must be an object")
     voiceover = VoiceoverConfig(
         enabled=bool(voice_raw.get("enabled", False)),
         provider=str(voice_raw.get("provider", "")),

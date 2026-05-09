@@ -9,14 +9,13 @@ from reels.config import ReelConfig, load_reel_config
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     color = hex_color.strip().lstrip("#")
-    if len(color) != 6:
-        return (17, 17, 17)
     return tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def _make_gradient_frame(size: tuple[int, int], top: str, bottom: str):
     import numpy as np
     from PIL import Image
+
     w, h = size
     top_rgb = np.array(_hex_to_rgb(top), dtype=np.float32)
     bottom_rgb = np.array(_hex_to_rgb(bottom), dtype=np.float32)
@@ -26,17 +25,33 @@ def _make_gradient_frame(size: tuple[int, int], top: str, bottom: str):
     return Image.fromarray(frame, mode="RGB")
 
 
+def _load_font(height: int, size_ratio: float, bold: bool):
+    from PIL import ImageFont
+
+    target_size = max(18, int(height * size_ratio))
+    font_candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    for font_path in font_candidates:
+        if Path(font_path).exists():
+            return ImageFont.truetype(font_path, target_size)
+    return ImageFont.load_default()
+
+
 def _load_background(config: ReelConfig):
     from PIL import Image
+
     size = config.size
     bg = config.background
     if bg.type == "gradient":
         return _make_gradient_frame(size, bg.color, bg.color_end)
 
-    if bg.type in {"image", "video"} and bg.path:
+    if bg.type == "image" and bg.path:
         p = Path(bg.path)
-        if p.exists() and p.suffix.lower() != ".mp4":
-            return Image.open(p).convert("RGB").resize(size)
+        if not p.exists():
+            raise ValueError(f"background.path does not exist: {p}")
+        return Image.open(p).convert("RGB").resize(size)
 
     return Image.new("RGB", size, _hex_to_rgb(bg.color))
 
@@ -58,62 +73,93 @@ def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
     return lines
 
 
+def _scene_for_time(config: ReelConfig, t: float):
+    elapsed = 0.0
+    for scene in config.scenes:
+        elapsed += scene.duration
+        if t < elapsed:
+            return scene
+    return config.scenes[-1]
+
+
 def render_reel(config: ReelConfig, output_path: str | Path) -> None:
     try:
         import numpy as np
-        from PIL import ImageDraw, ImageFont
-        from moviepy import AudioFileClip, ImageSequenceClip
+        from PIL import ImageDraw
+        from moviepy import AudioFileClip, VideoClip
     except ImportError as exc:
-        raise RuntimeError("moviepy is required. Install dependencies from requirements.txt") from exc
+        raise RuntimeError(
+            "moviepy and ffmpeg are required. Install requirements and ensure ffmpeg is on PATH"
+        ) from exc
 
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
     w, h = config.size
-    font_title = ImageFont.load_default()
-    font_body = ImageFont.load_default()
+    margin = int(w * 0.08)
+    text_width = w - (margin * 2)
+
+    font_title = _load_font(h, 0.05, bold=True)
+    font_body = _load_font(h, 0.042, bold=False)
+    title_spacing = max(10, int(h * 0.012))
+    body_spacing = max(10, int(h * 0.01))
+
     base_bg = _load_background(config)
 
-    frames: list[np.ndarray] = []
-    for scene in config.scenes:
-        total_frames = max(1, int(scene.duration * config.fps))
-        for i in range(total_frames):
-            progress = i / total_frames
-            frame = base_bg.copy()
-            if config.background.type == "image":
-                zoom = 1.0 + 0.04 * progress
-                zw, zh = int(w / zoom), int(h / zoom)
-                ox, oy = (w - zw) // 2, (h - zh) // 2
-                frame = frame.crop((ox, oy, ox + zw, oy + zh)).resize((w, h))
+    def make_frame(t: float):
+        scene = _scene_for_time(config, t)
+        frame = base_bg.copy()
 
-            draw = ImageDraw.Draw(frame)
-            title_lines = _wrap_text(draw, config.title, font_title, int(w * 0.85))
-            scene_lines = _wrap_text(draw, scene.text, font_body, int(w * 0.85))
+        if config.background.type == "image":
+            progress = min(1.0, t / max(config.duration_seconds, 0.001))
+            zoom = 1.0 + 0.05 * progress
+            zw, zh = int(w / zoom), int(h / zoom)
+            ox, oy = (w - zw) // 2, (h - zh) // 2
+            frame = frame.crop((ox, oy, ox + zw, oy + zh)).resize((w, h))
 
-            y = int(h * 0.12)
-            for line in title_lines:
-                draw.text((int(w * 0.08), y), line, fill=(255, 255, 255), font=font_title)
-                y += 30
+        draw = ImageDraw.Draw(frame)
+        title_lines = _wrap_text(draw, config.title, font_title, text_width)
+        scene_lines = _wrap_text(draw, scene.text, font_body, text_width)
 
-            y = int(h * 0.60)
-            fade = min(1.0, progress / 0.2, (1.0 - progress) / 0.2)
-            text_color = tuple(int(255 * max(0.25, fade)) for _ in range(3))
-            for line in scene_lines:
-                draw.text((int(w * 0.08), y), line, fill=text_color, font=font_body)
-                y += 28
+        y = int(h * 0.12)
+        for line in title_lines:
+            draw.text(
+                (margin, y),
+                line,
+                fill=(255, 255, 255),
+                font=font_title,
+                stroke_width=max(1, int(h * 0.0025)),
+                stroke_fill=(0, 0, 0),
+            )
+            y += font_title.size + title_spacing
 
-            frames.append(np.array(frame))
+        y = int(h * 0.58)
+        for line in scene_lines:
+            draw.text(
+                (margin, y),
+                line,
+                fill=(255, 255, 255),
+                font=font_body,
+                stroke_width=max(2, int(h * 0.0025)),
+                stroke_fill=(0, 0, 0),
+            )
+            y += font_body.size + body_spacing
 
-    clip = ImageSequenceClip(frames, fps=config.fps)
+        return np.array(frame)
 
-    # Optional voiceover: supported via env/config path, otherwise silent video.
+    clip = VideoClip(frame_function=make_frame, duration=config.duration_seconds)
+
     if config.voiceover.enabled and config.voiceover.audio_path:
         audio_path = Path(config.voiceover.audio_path)
         if audio_path.exists():
             clip = clip.with_audio(AudioFileClip(str(audio_path)))
 
-    clip = clip.with_duration(config.duration_seconds)
-    clip.write_videofile(str(out), codec="libx264", audio_codec="aac", fps=config.fps)
+    try:
+        clip.write_videofile(str(out), codec="libx264", audio_codec="aac", fps=config.fps)
+    except OSError as exc:
+        raise RuntimeError(
+            "Failed to render video. Ensure ffmpeg is installed and accessible on PATH"
+        ) from exc
 
 
 def main() -> int:
@@ -125,18 +171,12 @@ def main() -> int:
     try:
         config = load_reel_config(args.input)
         render_reel(config, args.output)
-    except FileNotFoundError as exc:
-        print(f"ERROR: {exc}")
-        return 1
-    except ValueError as exc:
+    except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}")
         return 2
     except RuntimeError as exc:
         print(f"ERROR: {exc}")
         return 3
-    except OSError as exc:
-        print(f"ERROR: Failed to render reel: {exc}")
-        return 4
 
     print(f"Reel generated: {os.path.abspath(args.output)}")
     return 0
