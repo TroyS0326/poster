@@ -177,6 +177,33 @@ def test_summary_failed_item_includes_topic_and_error(tmp_path: Path) -> None:
     assert "must be numeric" in item["error"]
 
 
+def test_run_batch_marks_item_failed_for_duration_seconds_zero(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [{"topic": "Invalid duration", "slug": "bad_duration_zero", "duration_seconds": 0}]
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    assert item["status"] == "failed"
+    assert "items[0].duration_seconds must be > 0" in item["error"]
+
+
+def test_run_batch_marks_item_failed_for_scene_count_one(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [{"topic": "Invalid scene count", "slug": "bad_scene_one", "scene_count": 1}]
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    assert item["status"] == "failed"
+    assert "items[0].scene_count must be at least 2" in item["error"]
+
+
+def test_run_batch_marks_item_failed_for_duration_too_short(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["items"] = [{"topic": "Too short for scenes", "slug": "bad_timing", "duration_seconds": 5, "scene_count": 4}]
+    summary = run_batch(payload, tmp_path)
+    item = summary["items"][0]
+    assert item["status"] == "failed"
+    assert "items[0].duration_seconds is too short for the requested scene_count" in item["error"]
+
+
 def test_run_report_created_with_slug_and_status(tmp_path: Path) -> None:
     payload = _base_payload()
     payload["items"][0]["slug"] = "report_ok"

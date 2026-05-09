@@ -36,10 +36,23 @@ def _ensure_bool(value: Any, field_name: str) -> bool:
 
 
 def _int_or_raise(value: Any, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{field_name} must be numeric")
     try:
         return int(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{field_name} must be numeric") from exc
+
+
+def _validate_timing(duration_seconds: int, scene_count: int, field_prefix: str) -> None:
+    duration_field = f"{field_prefix}.duration_seconds" if field_prefix else "duration_seconds"
+    scene_field = f"{field_prefix}.scene_count" if field_prefix else "scene_count"
+    if duration_seconds <= 0:
+        raise ValueError(f"{duration_field} must be > 0")
+    if scene_count < 2:
+        raise ValueError(f"{scene_field} must be at least 2")
+    if duration_seconds < scene_count * 2:
+        raise ValueError(f"{duration_field} is too short for the requested scene_count")
 
 
 def load_batch_input(path: Path) -> dict[str, Any]:
@@ -99,12 +112,15 @@ def _normalize_voiceover_format(value: Any, *, field_name: str) -> str | None:
 
 
 def _build_defaults(payload: dict[str, Any]) -> dict[str, Any]:
+    duration_seconds = _int_or_raise(payload.get("duration_seconds", DEFAULT_DURATION_SECONDS), "duration_seconds")
+    scene_count = _int_or_raise(payload.get("scene_count", DEFAULT_SCENE_COUNT), "scene_count")
+    _validate_timing(duration_seconds, scene_count, "")
     return {
         "brand": payload.get("brand", DEFAULT_BRAND),
         "template": payload.get("template", DEFAULT_TEMPLATE),
         "visual_style": payload.get("visual_style"),
-        "duration_seconds": _int_or_raise(payload.get("duration_seconds", DEFAULT_DURATION_SECONDS), "duration_seconds"),
-        "scene_count": _int_or_raise(payload.get("scene_count", DEFAULT_SCENE_COUNT), "scene_count"),
+        "duration_seconds": duration_seconds,
+        "scene_count": scene_count,
         "generate_background": _ensure_bool(payload.get("generate_background", False), "generate_background"),
         "generate_voiceover_placeholder": _ensure_bool(
             payload.get("generate_voiceover_placeholder", False), "generate_voiceover_placeholder"
@@ -146,8 +162,9 @@ def plan_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             merged.get("generate_voiceover_placeholder", False), f"items[{idx}].generate_voiceover_placeholder"
         )
         _ensure_bool(merged.get("render_mp4", False), f"items[{idx}].render_mp4")
-        _int_or_raise(merged.get("duration_seconds"), f"items[{idx}].duration_seconds")
-        _int_or_raise(merged.get("scene_count"), f"items[{idx}].scene_count")
+        duration_seconds = _int_or_raise(merged.get("duration_seconds"), f"items[{idx}].duration_seconds")
+        scene_count = _int_or_raise(merged.get("scene_count"), f"items[{idx}].scene_count")
+        _validate_timing(duration_seconds, scene_count, f"items[{idx}]")
         brand = str(merged.get("brand"))
         visual_style = merged.get("visual_style")
         resolve_visual_style(brand, visual_style)
@@ -256,6 +273,7 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             entry["render_requested"] = render_mp4
             duration_seconds = _int_or_raise(merged.get("duration_seconds"), f"items[{idx}].duration_seconds")
             scene_count = _int_or_raise(merged.get("scene_count"), f"items[{idx}].scene_count")
+            _validate_timing(duration_seconds, scene_count, f"items[{idx}]")
             brand = str(merged.get("brand"))
             visual_style = merged.get("visual_style")
 
