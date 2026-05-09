@@ -54,7 +54,7 @@ python -m reels.generate --input outputs/storyboard.json --output outputs/reel.m
 ```
 
 Useful options:
-- `--audience` (default: `retail day traders`)
+- `--audience` (optional; brand pack default is used when omitted)
 - `--tone` (default: `direct`)
 - `--duration-seconds` (default: `18`)
 - `--scene-count` (default: `4`)
@@ -64,7 +64,9 @@ Useful options:
 
 Template structures stay concise for vertical overlays and adapt to scene count.
 
-Brand packs set defaults for audience/CTA vocabulary and visual palette, while keeping compliance-safe wording (no guaranteed outcomes, income claims, or "signals that win" style language).
+Brand packs provide default audience, default CTA, and color palette settings per brand.
+
+Storyboard generation applies lightweight compliance checks to topic, CTA, and generated scene text. Unsafe phrases are rejected (for example: `guaranteed profits`, `passive income`, `risk-free`, `100% accurate`, `buy now`, `sell now`).
 
 Example with brand + template:
 

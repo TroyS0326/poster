@@ -1,10 +1,12 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from reels.config import load_reel_config
-from reels.storyboard import _allocate_scene_durations, _validate_inputs, generate_storyboard
+from reels.storyboard import BRAND_PACKS, BANNED_MARKETING_TERMS, _allocate_scene_durations, _validate_inputs, generate_storyboard
 
 
 def test_duration_allocation_count_matches_scene_count() -> None:
@@ -120,13 +122,54 @@ def test_unsupported_brand_rejected() -> None:
         generate_storyboard(topic="Topic", brand="unknown")
 
 
+def test_generic_brand_default_cta_is_generic() -> None:
+    payload = generate_storyboard(topic="Why rules matter", brand="generic")
+    combined = " ".join(scene["text"] for scene in payload["scenes"]).lower()
+    assert BRAND_PACKS["generic"]["default_cta"].lower() in combined
+    assert "xeanvi" not in combined
+    assert "playbook" not in combined
+    assert "command center" not in combined
+
+
 def test_xeanvi_brand_uses_safe_language() -> None:
     payload = generate_storyboard(topic="Why rules matter", brand="xeanvi", template="mistake")
     combined = " ".join(scene["text"] for scene in payload["scenes"]).lower()
     assert "rule-based" in combined
-    assert "playbook" in combined or "validation" in combined
-    banned = ["guaranteed", "passive income", "make money while you sleep", "signals that win"]
-    assert not any(term in combined for term in banned)
+    assert any(term in combined for term in ["playbook", "command center", "validation", "rule-based execution"])
+
+
+def test_brand_defaults_applied_when_omitted() -> None:
+    payload = generate_storyboard(topic="Risk controls first", brand="xeanvi", audience=None, call_to_action=None)
+    assert payload["scenes"][0]["text"].lower().startswith(BRAND_PACKS["xeanvi"]["default_audience"])
+    assert BRAND_PACKS["xeanvi"]["default_cta"] in " ".join(scene["text"] for scene in payload["scenes"])
+
+
+def test_custom_audience_overrides_default() -> None:
+    payload = generate_storyboard(topic="Risk controls first", brand="xeanvi", audience="swing traders")
+    assert payload["scenes"][0]["text"].lower().startswith("swing traders")
+
+
+def test_custom_compliant_cta_overrides_default() -> None:
+    cta = "Save this and review your rules before market open."
+    payload = generate_storyboard(topic="Risk controls first", brand="generic", call_to_action=cta)
+    assert cta in " ".join(scene["text"] for scene in payload["scenes"])
+
+
+@pytest.mark.parametrize("topic,bad_phrase", [("guaranteed profits from trading", "guaranteed profit"), ("passive income with charts", "passive income")])
+def test_banned_topic_rejected(topic: str, bad_phrase: str) -> None:
+    with pytest.raises(ValueError, match=f"topic contains prohibited marketing/compliance phrase: {bad_phrase}"):
+        generate_storyboard(topic=topic)
+
+
+def test_banned_cta_rejected() -> None:
+    with pytest.raises(ValueError, match="call_to_action contains prohibited marketing/compliance phrase: buy now"):
+        generate_storyboard(topic="Risk controls first", call_to_action="Buy now and never miss out")
+
+
+def test_generated_scene_text_has_no_banned_terms() -> None:
+    payload = generate_storyboard(topic="Why rules matter", brand="xeanvi", template="checklist")
+    combined = " ".join(scene["text"].lower() for scene in payload["scenes"])
+    assert not any(term in combined for term in BANNED_MARKETING_TERMS)
 
 
 @pytest.mark.parametrize("scene_count", [2, 3, 4, 6])
@@ -134,3 +177,16 @@ def test_generated_scene_count_matches_request(scene_count: int) -> None:
     payload = generate_storyboard(topic="Topic", template="checklist", scene_count=scene_count)
     assert len(payload["scenes"]) == scene_count
     assert all(scene["text"].strip() for scene in payload["scenes"])
+
+
+def test_default_cli_compatible_behavior_still_works(tmp_path: Path) -> None:
+    output = tmp_path / "storyboard_cli.json"
+    result = subprocess.run(
+        [sys.executable, "-m", "reels.storyboard", "--topic", "Why most traders need rules, not motivation", "--output", str(output)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    cfg = load_reel_config(output)
+    assert cfg.title
