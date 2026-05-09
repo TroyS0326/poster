@@ -151,3 +151,89 @@ def test_autopost_cfg_dry_run_forces_publish_dry_run(tmp_path, monkeypatch):
     assert result["dry_run"] is True
     assert captured["dry_run"] is True
     assert (run_dir / "a.mp4").exists()
+
+
+def test_autopost_stale_summary_missing_json_triggers_regeneration(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03"
+    run_dir.mkdir(parents=True)
+    stale_json = run_dir / "a/a.json"
+    (run_dir / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(stale_json)}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=True)
+
+    called = {"n": 0}
+    fresh_dir = run_dir / "a"
+    fresh_json = fresh_dir / "a.json"
+
+    def _run_batch(payload, out_dir):
+        called["n"] += 1
+        fresh_dir.mkdir(parents=True, exist_ok=True)
+        fresh_json.write_text("{}", encoding="utf-8")
+        (run_dir / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(fresh_json)}]}), encoding="utf-8")
+
+    monkeypatch.setattr(autopost, "run_batch", _run_batch)
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+    monkeypatch.setattr(autopost, "render_reel", lambda cfg, out: Path(out).write_bytes(b"mp4"))
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "planned"}, "facebook": {"status": "planned"}, "video_url": "u"})
+
+    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=True)
+    assert called["n"] == 1
+    assert result["items"][0]["json_path"] == str(fresh_json)
+
+
+def test_autopost_stale_summary_missing_item_folder_no_render_fail(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03"
+    run_dir.mkdir(parents=True)
+    missing_item_json = run_dir / "missing/missing.json"
+    (run_dir / "summary.json").write_text(json.dumps({"items": [{"slug": "missing", "json_path": str(missing_item_json)}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=False)
+
+    fresh_dir = run_dir / "a"
+    fresh_json = fresh_dir / "a.json"
+
+    def _run_batch(payload, out_dir):
+        fresh_dir.mkdir(parents=True, exist_ok=True)
+        fresh_json.write_text("{}", encoding="utf-8")
+        (run_dir / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(fresh_json)}]}), encoding="utf-8")
+
+    monkeypatch.setattr(autopost, "run_batch", _run_batch)
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+    monkeypatch.setattr(autopost, "render_reel", lambda cfg, out: Path(out).write_bytes(b"mp4"))
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "success"}, "facebook": {"status": "success"}})
+
+    result = autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=False)
+    assert result["items"][0].get("status") != "render_failed"
+
+
+def test_autopost_dry_run_stale_summary_regenerates_without_cleanup_or_real_post(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "outputs/queue/day_03"
+    run_dir.mkdir(parents=True)
+    missing_json = run_dir / "a/a.json"
+    (run_dir / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(missing_json)}]}), encoding="utf-8")
+    _set_cfg(monkeypatch, post_dry_run=True)
+
+    fresh_dir = run_dir / "a"
+    fresh_json = fresh_dir / "a.json"
+    (fresh_dir / "a.wav").parent.mkdir(parents=True, exist_ok=True)
+    (fresh_dir / "a.wav").write_bytes(b"wav")
+    called = {"dry_run": None}
+
+    def _run_batch(payload, out_dir):
+        fresh_dir.mkdir(parents=True, exist_ok=True)
+        fresh_json.write_text("{}", encoding="utf-8")
+        (run_dir / "summary.json").write_text(json.dumps({"items": [{"slug": "a", "json_path": str(fresh_json)}]}), encoding="utf-8")
+
+    def _publish(**kwargs):
+        called["dry_run"] = kwargs["dry_run"]
+        return {"instagram": {"status": "planned"}, "facebook": {"status": "planned"}, "video_url": "u"}
+
+    monkeypatch.setattr(autopost, "run_batch", _run_batch)
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+    monkeypatch.setattr(autopost, "render_reel", lambda cfg, out: Path(out).write_bytes(b"mp4"))
+    monkeypatch.setattr(autopost, "publish_reel", _publish)
+
+    autopost.run_autopost(_make_queue(tmp_path), "day_03", "https://example.trycloudflare.com", dry_run=True)
+    assert called["dry_run"] is True
+    assert (fresh_dir / "a.wav").exists()

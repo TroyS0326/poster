@@ -46,6 +46,14 @@ def _publish_success_for_platform(platform: str, publish_result: dict) -> bool:
     return False
 
 
+def _summary_has_missing_item_assets(summary: dict) -> bool:
+    for item in summary.get("items", []):
+        json_path = item.get("json_path")
+        if not json_path or not Path(json_path).exists():
+            return True
+    return False
+
+
 def run_autopost(
     queue_file: Path,
     run_id: str,
@@ -64,6 +72,10 @@ def run_autopost(
         run_batch(_build_batch_payload(payload, run), run_dir)
 
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if _summary_has_missing_item_assets(summary):
+        run_batch(_build_batch_payload(payload, run), run_dir)
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+
     cfg = load_publish_config()
     platform = _selected_platform(cfg, platform_override)
     effective_dry_run = dry_run or cfg.post_dry_run
