@@ -20,15 +20,17 @@ Set in `.env`:
 - `REPLICATE_OUTPUT_FORMAT=jpg` (recommended for Meta/Instagram compatibility)
 
 With Replicate enabled, local Vast.ai/AUTOMATIC1111 Stable Diffusion WebUI is not required for image generation.
-With `IMAGE_PROVIDER=replicate`, Vast.ai `dashboard.py` public image hosting is not required for Meta posting.
-The bot uses Replicate's returned output URL for posting and also saves a local copy to `images/generated/`.
+The bot saves a local copy to `images/generated/`, and Meta posting should usually use that locally hosted public URL because Meta can reject some Replicate delivery URLs as invalid/fetch failures.
+Recommended: `PREFER_LOCAL_PUBLIC_IMAGE_URL=true`.
 
 ## Important config notes
 - `.env` is local-only and must never be committed.
 - Use `.env.example` as your template.
-- `IMG_PUBLIC_URL_BASE` is only required when `IMAGE_PROVIDER=auto1111` (local image generation/hosting).
-- For local dashboard serving, example: `IMG_PUBLIC_URL_BASE=http://YOUR_PUBLIC_HOST:8080/images/generated/`
-- Meta cannot fetch localhost URLs. The image URL must be publicly reachable by Meta.
+- Recommended: set `PREFER_LOCAL_PUBLIC_IMAGE_URL=true` so posting uses your own public URL for files saved in `images/generated/`.
+- When `PREFER_LOCAL_PUBLIC_IMAGE_URL=true`, `IMG_PUBLIC_URL_BASE` is required even with `IMAGE_PROVIDER=replicate`.
+- Serve `images/generated/` publicly using `python dashboard.py` or another static file server.
+- Meta cannot fetch localhost URLs; your image URL must be publicly reachable by Meta.
+- On Vast.ai, port `8080` is often already used by Jupyter; choose an available mapped/public port for your image hosting URL.
 - `DRY_RUN=true` is safest for first test.
 - `MANUAL_REVIEW_MODE=true` generates content but does not post.
 
@@ -38,8 +40,8 @@ Set `DRY_RUN=true` in `.env`. Bot will generate and log, but will not call Meta 
 ## Env vars
 Required always: `GEMINI_API_KEY`.
 `GEMINI_MODEL` defaults to `gemini-1.5-flash` and can be changed if Google changes available model names.
-When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` and `IMG_PUBLIC_URL_BASE` are required.
-When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required (`IMG_PUBLIC_URL_BASE` is optional).
+When `IMAGE_PROVIDER=auto1111` (default): `SD_API_URL` is required, and `IMG_PUBLIC_URL_BASE` is required when `PREFER_LOCAL_PUBLIC_IMAGE_URL=true` (recommended default).
+When `IMAGE_PROVIDER=replicate`: `REPLICATE_API_TOKEN` and `REPLICATE_MODEL` are required; `IMG_PUBLIC_URL_BASE` is also required when `PREFER_LOCAL_PUBLIC_IMAGE_URL=true`.
 For Meta/Instagram compatibility, use `REPLICATE_OUTPUT_FORMAT=jpg`. WebP output URLs may be rejected by Meta/Instagram.
 Required only when `DRY_RUN=false` and `MANUAL_REVIEW_MODE=false`: `META_ACCESS_TOKEN`, `FB_PAGE_ID`, `IG_BUSINESS_ID`.
 Defaults include `POST_INTERVAL_HOURS=4`, `META_GRAPH_VERSION=v20.0`, `MAX_GENERATION_ATTEMPTS=3`.

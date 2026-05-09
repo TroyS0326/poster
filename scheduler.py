@@ -51,11 +51,15 @@ def run_workflow(config, logger):
         return
 
     logger.info("image generated: %s", image_result["local_path"])
-    hosted_url = image_result.get("remote_url")
-    if hosted_url:
+    if config.prefer_local_public_image_url:
+        hosted_url = upload_image(image_result["local_path"], config)
+        logger.info("using locally hosted public image URL")
+    elif image_result.get("remote_url"):
+        hosted_url = image_result["remote_url"]
         logger.info("using remote image URL from provider")
     else:
         hosted_url = upload_image(image_result["local_path"], config)
+        logger.info("using locally hosted public image URL fallback")
     logger.info("hosted/public image URL created: %s", hosted_url)
 
     if config.manual_review_mode:

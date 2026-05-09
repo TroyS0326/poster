@@ -14,6 +14,7 @@ class Config:
     fb_page_id: str
     ig_business_id: str
     img_public_url_base: str
+    prefer_local_public_image_url: bool
     gemini_api_key: str
     gemini_model: str
     openai_api_key: str
@@ -47,6 +48,7 @@ def load_config() -> Config:
         fb_page_id=os.getenv("FB_PAGE_ID", ""),
         ig_business_id=os.getenv("IG_BUSINESS_ID", ""),
         img_public_url_base=os.getenv("IMG_PUBLIC_URL_BASE", ""),
+        prefer_local_public_image_url=_to_bool(os.getenv("PREFER_LOCAL_PUBLIC_IMAGE_URL"), True),
         gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
@@ -70,8 +72,9 @@ def validate_required_config(config: Config) -> tuple[bool, list[str]]:
     if config.image_provider == "auto1111":
         if not config.sd_api_url:
             missing.append("SD_API_URL")
-        if not config.img_public_url_base:
-            missing.append("IMG_PUBLIC_URL_BASE")
+    if config.prefer_local_public_image_url and not config.img_public_url_base:
+        missing.append("IMG_PUBLIC_URL_BASE")
+
     if config.image_provider == "replicate":
         if not config.replicate_api_token:
             missing.append("REPLICATE_API_TOKEN")
