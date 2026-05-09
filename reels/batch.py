@@ -98,6 +98,86 @@ def _normalize_voiceover_format(value: Any, *, field_name: str) -> str | None:
     return normalized
 
 
+def _build_defaults(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "brand": payload.get("brand", DEFAULT_BRAND),
+        "template": payload.get("template", DEFAULT_TEMPLATE),
+        "visual_style": payload.get("visual_style"),
+        "duration_seconds": _int_or_raise(payload.get("duration_seconds", DEFAULT_DURATION_SECONDS), "duration_seconds"),
+        "scene_count": _int_or_raise(payload.get("scene_count", DEFAULT_SCENE_COUNT), "scene_count"),
+        "generate_background": _ensure_bool(payload.get("generate_background", False), "generate_background"),
+        "generate_voiceover_placeholder": _ensure_bool(
+            payload.get("generate_voiceover_placeholder", False), "generate_voiceover_placeholder"
+        ),
+        "render_mp4": _ensure_bool(payload.get("render_mp4", False), "render_mp4"),
+        "voiceover_provider": str(payload.get("voiceover_provider", "silent")),
+        "voiceover_voice": payload.get("voiceover_voice"),
+        "voiceover_format": payload.get("voiceover_format"),
+    }
+
+
+def plan_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
+    items = payload.get("items")
+    if not isinstance(items, list) or not items:
+        raise ValueError("items must be a non-empty list")
+    defaults = _build_defaults(payload)
+
+    seen_slugs: set[str] = set()
+    planned_items: list[dict[str, Any]] = []
+    for idx, raw_item in enumerate(items):
+        if not isinstance(raw_item, dict):
+            raise ValueError(f"items[{idx}] must be an object")
+        merged = _merge_item_defaults(defaults, raw_item)
+        topic = str(merged.get("topic", "")).strip()
+        if not topic:
+            raise ValueError(f"items[{idx}].topic must be non-empty")
+        validate_compliance_text(topic, f"items[{idx}].topic")
+
+        slug = str(merged.get("slug", "")).strip() or _slugify(topic)
+        slug = _slugify(slug)
+        if not slug:
+            raise ValueError(f"items[{idx}] slug is empty after sanitization")
+        if slug in seen_slugs:
+            raise ValueError(f"duplicate slug detected: {slug}")
+        seen_slugs.add(slug)
+
+        _ensure_bool(merged.get("generate_background", False), f"items[{idx}].generate_background")
+        generate_voiceover_placeholder = _ensure_bool(
+            merged.get("generate_voiceover_placeholder", False), f"items[{idx}].generate_voiceover_placeholder"
+        )
+        _ensure_bool(merged.get("render_mp4", False), f"items[{idx}].render_mp4")
+        _int_or_raise(merged.get("duration_seconds"), f"items[{idx}].duration_seconds")
+        _int_or_raise(merged.get("scene_count"), f"items[{idx}].scene_count")
+        brand = str(merged.get("brand"))
+        visual_style = merged.get("visual_style")
+        resolve_visual_style(brand, visual_style)
+        template = str(merged.get("template"))
+        if template not in {"discipline", "mistake", "checklist", "myth", "before-after"}:
+            raise ValueError(f"items[{idx}].template must be one of: discipline, mistake, checklist, myth, before-after")
+
+        voiceover_provider = str(merged.get("voiceover_provider", "silent"))
+        voiceover_format = _normalize_voiceover_format(merged.get("voiceover_format"), field_name=f"items[{idx}].voiceover_format")
+        final_audio_format = voiceover_format or "wav"
+        if voiceover_provider == "silent" and final_audio_format != "wav":
+            raise ValueError(f"items[{idx}].voiceover_format must be wav when voiceover_provider is silent")
+        get_provider(voiceover_provider)
+
+        item_dir = output_dir / slug
+        planned_items.append(
+            {
+                "index": idx,
+                "slug": slug,
+                "topic": topic,
+                "item_dir": str(item_dir),
+                "json_path": str(item_dir / f"{slug}.json"),
+                "png_path": str(item_dir / f"{slug}.png"),
+                "audio_path": str(item_dir / f"{slug}.{final_audio_format}") if generate_voiceover_placeholder else None,
+                "mp4_path": str(item_dir / f"{slug}.mp4"),
+            }
+        )
+    return {"output_dir": str(output_dir), "item_count": len(items), "items": planned_items}
+
+
 def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
     skipped_render_count = sum(
         1 for item in summary["items"] if item.get("status") == "success" and item.get("render_requested") is False
@@ -137,22 +217,7 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     items = payload.get("items")
     if not isinstance(items, list) or not items:
         raise ValueError("items must be a non-empty list")
-
-    defaults = {
-        "brand": payload.get("brand", DEFAULT_BRAND),
-        "template": payload.get("template", DEFAULT_TEMPLATE),
-        "visual_style": payload.get("visual_style"),
-        "duration_seconds": _int_or_raise(payload.get("duration_seconds", DEFAULT_DURATION_SECONDS), "duration_seconds"),
-        "scene_count": _int_or_raise(payload.get("scene_count", DEFAULT_SCENE_COUNT), "scene_count"),
-        "generate_background": _ensure_bool(payload.get("generate_background", False), "generate_background"),
-        "generate_voiceover_placeholder": _ensure_bool(
-            payload.get("generate_voiceover_placeholder", False), "generate_voiceover_placeholder"
-        ),
-        "render_mp4": _ensure_bool(payload.get("render_mp4", False), "render_mp4"),
-        "voiceover_provider": str(payload.get("voiceover_provider", "silent")),
-        "voiceover_voice": payload.get("voiceover_voice"),
-        "voiceover_format": payload.get("voiceover_format"),
-    }
+    defaults = _build_defaults(payload)
     output_dir.mkdir(parents=True, exist_ok=True)
     events_path = output_dir / "events.jsonl"
     if events_path.exists():
