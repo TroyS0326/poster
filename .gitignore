@@ -1,6 +1,7 @@
 .env
 logs/
 images/generated/
+outputs/
 __pycache__/
 .pytest_cache/
 *.pyc

@@ -2,3 +2,6 @@ requests
 python-dotenv
 flask
 pillow
+moviepy
+numpy
+pytest
