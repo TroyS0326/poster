@@ -21,13 +21,18 @@ def write_silent_wav(output: Path, duration_seconds: float) -> None:
 
     output.parent.mkdir(parents=True, exist_ok=True)
     frame_count = int(round(duration_seconds * SAMPLE_RATE))
-    silence = b"\x00\x00" * frame_count
 
     with wave.open(str(output), "wb") as wav_file:
         wav_file.setnchannels(CHANNELS)
         wav_file.setsampwidth(SAMPLE_WIDTH_BYTES)
         wav_file.setframerate(SAMPLE_RATE)
-        wav_file.writeframes(silence)
+        remaining_frames = frame_count
+        chunk_frames = 4096
+        silence_chunk = b"\x00\x00" * chunk_frames
+        while remaining_frames > 0:
+            current = min(remaining_frames, chunk_frames)
+            wav_file.writeframes(silence_chunk[: current * SAMPLE_WIDTH_BYTES])
+            remaining_frames -= current
 
 
 class VoiceoverProvider(Protocol):

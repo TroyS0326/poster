@@ -171,7 +171,7 @@ Batch format (`examples/reels_batch_example.json`) supports top-level defaults a
 Per-item output paths are predictable:
 - `outputs/batch/<slug>/<slug>.json`
 - `outputs/batch/<slug>/<slug>.png` (if `generate_background=true`)
-- `outputs/batch/<slug>/<slug>.wav` (if `generate_voiceover_placeholder=true`)
+- `outputs/batch/<slug>/<slug>.<wav|mp3>` (if `generate_voiceover_placeholder=true`)
 - `outputs/batch/<slug>/<slug>.mp4` (if `render_mp4=true` and render succeeds)
 
 Batch writes a machine-readable summary file at:
@@ -182,11 +182,13 @@ Batch also writes local operational logs for debugging:
 - `outputs/batch/run_report.md` (human-readable run report with counts + per-item table)
 - `outputs/batch/events.jsonl` (JSONL event stream with `batch_started`, `item_started`, `storyboard_written`, `background_written`, `voiceover_written`, `render_written`, `item_failed`, `item_completed`, `batch_completed`)
 - In `run_report.md`, `skipped_render_count` counts only successful items where `render_mp4` was not requested (`render_requested=false`); failed and render_failed items are not counted as skipped.
+- Per-item summary/report fields now include `audio_path` for generated voiceover output. `wav_path` is retained only for `.wav` outputs for backward compatibility.
 
 Runtime behavior:
 - If `render_mp4=false`, MP4 rendering is skipped.
 - If `render_mp4=true` and moviepy/ffmpeg is unavailable, that item is marked failed/render_failed and batch processing continues.
 - Compliance guardrails are applied per item topic; failed items do not stop remaining items.
+- Batch `voiceover_format` supports only `wav` or `mp3`. `silent` provider requires `wav`; `edge_tts_optional` supports `wav`/`mp3`; `local_file` can write either supported format.
 
 Generated files remain under `outputs/` and are gitignored.
 
