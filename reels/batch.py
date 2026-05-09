@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -59,12 +60,73 @@ def _merge_item_defaults(defaults: dict[str, Any], item: dict[str, Any]) -> dict
     return merged
 
 
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _write_event(log_path: Path, event_dict: dict[str, Any]) -> None:
+    payload = dict(event_dict)
+    payload.setdefault("timestamp", _utc_timestamp())
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload) + "\n")
+
+
+def _build_summary(output_dir: Path, items: list[dict[str, Any]]) -> dict[str, Any]:
+    success_count = sum(1 for item in items if item.get("status") == "success")
+    failed_count = sum(1 for item in items if item.get("status") == "failed")
+    render_failed_count = sum(1 for item in items if item.get("status") == "render_failed")
+    return {
+        "output_dir": str(output_dir),
+        "total_items": len(items),
+        "success_count": success_count,
+        "failed_count": failed_count,
+        "render_failed_count": render_failed_count,
+        "items": items,
+    }
+
+
+def _write_run_report(summary: dict[str, Any], report_path: Path) -> None:
+    skipped_render_count = sum(1 for item in summary["items"] if not item.get("mp4_path"))
+    lines = [
+        "# Batch Run Report",
+        "",
+        f"- run_timestamp: {_utc_timestamp()}",
+        f"- output_directory: {summary['output_dir']}",
+        f"- total_items: {summary['total_items']}",
+        f"- success_count: {summary['success_count']}",
+        f"- failed_count: {summary['failed_count']}",
+        f"- render_failed_count: {summary['render_failed_count']}",
+        f"- skipped_render_count: {skipped_render_count}",
+        "",
+        "| index | slug | topic | status | json_path | png_path | wav_path | mp4_path | error |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for item in summary["items"]:
+        row = [
+            str(item.get("index", "")),
+            str(item.get("slug", "")),
+            str(item.get("topic", "")),
+            str(item.get("status", "")),
+            str(item.get("json_path", "")),
+            str(item.get("png_path", "")),
+            str(item.get("wav_path", "")),
+            str(item.get("mp4_path", "")),
+            str(item.get("error", "")).replace("\n", " "),
+        ]
+        lines.append(f"| {' | '.join(row)} |")
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
+    events_path = output_dir / "events.jsonl"
+    if events_path.exists():
+        events_path.unlink()
 
     items = payload.get("items")
     if not isinstance(items, list) or not items:
         raise ValueError("items must be a non-empty list")
+    _write_event(events_path, {"event": "batch_started", "output_dir": str(output_dir), "total_items": len(items)})
 
     defaults = {
         "brand": payload.get("brand", DEFAULT_BRAND),
@@ -101,6 +163,7 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             if slug in seen_slugs:
                 raise ValueError(f"duplicate slug detected: {slug}")
             seen_slugs.add(slug)
+            _write_event(events_path, {"event": "item_started", "index": idx, "slug": slug})
 
             generate_background = _ensure_bool(merged.get("generate_background", False), f"items[{idx}].generate_background")
             generate_voiceover_placeholder = _ensure_bool(
@@ -150,6 +213,7 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                     voiceover_audio_path=voiceover_audio_path,
                 )
             json_path.write_text(json.dumps(storyboard, indent=2), encoding="utf-8")
+            _write_event(events_path, {"event": "storyboard_written", "index": idx, "slug": slug, "path": str(json_path)})
             entry["slug"] = slug
             entry["topic"] = topic
             entry["json_path"] = str(json_path)
@@ -158,14 +222,19 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 cfg = load_reel_config(json_path)
                 write_silent_wav(wav_path, cfg.duration_seconds)
                 entry["wav_path"] = str(wav_path)
+                _write_event(events_path, {"event": "voiceover_written", "index": idx, "slug": slug, "path": str(wav_path)})
 
             if render_mp4:
                 try:
                     render_reel(load_reel_config(json_path), mp4_path)
                     entry["mp4_path"] = str(mp4_path)
+                    _write_event(events_path, {"event": "render_written", "index": idx, "slug": slug, "path": str(mp4_path)})
                 except RuntimeError as exc:
                     entry["status"] = "render_failed"
                     entry["error"] = str(exc)
+            if entry.get("png_path"):
+                _write_event(events_path, {"event": "background_written", "index": idx, "slug": slug, "path": entry["png_path"]})
+            _write_event(events_path, {"event": "item_completed", "index": idx, "slug": slug, "status": entry["status"]})
             summary_items.append(entry)
         except Exception as exc:
             entry.setdefault("slug", _slugify(str(raw_item.get("slug", ""))) if isinstance(raw_item, dict) else "")
@@ -175,10 +244,16 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                     entry["topic"] = topic
             entry["status"] = "failed"
             entry["error"] = str(exc)
+            _write_event(
+                events_path,
+                {"event": "item_failed", "index": idx, "slug": entry.get("slug", ""), "error": str(exc), "status": entry["status"]},
+            )
             summary_items.append(entry)
 
-    summary = {"output_dir": str(output_dir), "items": summary_items}
+    summary = _build_summary(output_dir, summary_items)
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    _write_run_report(summary, output_dir / "run_report.md")
+    _write_event(events_path, {"event": "batch_completed", "output_dir": str(output_dir)})
     return summary
 
 
