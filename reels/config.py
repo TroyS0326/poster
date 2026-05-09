@@ -29,6 +29,7 @@ class VoiceoverConfig:
     enabled: bool = False
     provider: str = ""
     audio_path: str = ""
+    script: str = ""
 
 
 @dataclass(frozen=True)
@@ -148,6 +149,7 @@ def load_reel_config(path: str | Path) -> ReelConfig:
         enabled=bool(voice_raw.get("enabled", False)),
         provider=str(voice_raw.get("provider", "")),
         audio_path=str(voice_raw.get("audio_path", "")),
+        script=str(voice_raw.get("script", "")).strip(),
     )
 
     return ReelConfig(
