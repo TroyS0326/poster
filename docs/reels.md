@@ -37,3 +37,29 @@ python -m reels.generate --input reels_config_example.json --output outputs/reel
 - TTS voiceover providers (env/config-driven)
 - reusable templates and brand packs
 - scheduler/uploader integration for social platforms
+
+
+## Storyboard/script generator (JSON only)
+
+Generate a ReelConfig-compatible storyboard JSON from a simple topic:
+
+```bash
+python -m reels.storyboard --topic "Why most traders need rules, not motivation" --output outputs/storyboard.json
+```
+
+Then render with the existing command:
+
+```bash
+python -m reels.generate --input outputs/storyboard.json --output outputs/reel.mp4
+```
+
+Useful options:
+- `--audience` (default: `retail day traders`)
+- `--tone` (default: `direct`)
+- `--duration-seconds` (default: `18`)
+- `--scene-count` (default: `4`)
+- `--background-type` (`solid` or `gradient`)
+
+Template structure is reliable and concise: Hook → Problem → Reframe/Insight → CTA.
+
+AI mode is optional and future-safe. If no AI provider/key is configured, local template mode is used automatically and does not require paid APIs.

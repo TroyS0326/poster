@@ -94,4 +94,5 @@ A separate module is available for local vertical MP4 reel generation without ch
 - Output videos are generated under `outputs/` and are gitignored.
 - Reels generator backgrounds: `background.type` supports `solid`, `gradient`, and `image` only (no video backgrounds yet).
 - Reels rendering requires `ffmpeg` on PATH for moviepy.
+- Storyboard JSON generator: `python -m reels.storyboard --topic "Why most traders need rules, not motivation" --output outputs/storyboard.json`
 
