@@ -19,11 +19,17 @@ STYLE_MAP = {
 
 def scene_prompt(topic: str, title: str, scene_text: str, style: str) -> str:
     style_text = STYLE_MAP.get(style, STYLE_MAP["premium_editorial_trading"])
+    lower = scene_text.lower()
+    tone = "tense and urgent" if any(k in lower for k in ["panic","revenge","overtrade","loss"]) else "calm, controlled, methodical"
+    subject = "trader at multi-monitor desk" if "trader" in lower or "trade" in lower else "finance workstation with charts and checklist"
     return (
-        f"Vertical 9:16 scene background for finance reel. Topic: {topic}. "
-        f"Reel title: {title}. Scene message: {scene_text}. "
-        f"Show emotional intent and action in trading context, readable composition with negative space for text overlays, "
-        f"no visible text in image, {style_text}."
+        f"Vertical 9:16 premium fintech editorial scene. Topic: {topic}. Title: {title}. Scene meaning: {scene_text}. "
+        f"Emotional tone: {tone}. Subject/action: {subject}. "
+        "Trading context with dashboards, risk-control motifs, terminal details, and cinematic depth. "
+        "Composition: clear visual focal point plus protected text-safe area in left/center third for kinetic typography. "
+        "Lighting/lens: moody low-key lighting, subtle bloom, shallow depth where useful, sharp details. "
+        "No embedded text, no watermark, no logos, no social UI chrome. "
+        f"Style direction: {style_text}."
     )
 
 
