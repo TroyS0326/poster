@@ -17,6 +17,7 @@ from reels.storyboard import (
     DEFAULT_TEMPLATE,
     generate_storyboard,
 )
+from reels.visuals import resolve_visual_style
 from reels.voiceover import write_silent_wav
 
 
@@ -31,6 +32,13 @@ def _ensure_bool(value: Any, field_name: str) -> bool:
     if not isinstance(value, bool):
         raise ValueError(f"{field_name} must be a boolean")
     return value
+
+
+def _int_or_raise(value: Any, field_name: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be numeric") from exc
 
 
 def load_batch_input(path: Path) -> dict[str, Any]:
@@ -62,11 +70,13 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         "brand": payload.get("brand", DEFAULT_BRAND),
         "template": payload.get("template", DEFAULT_TEMPLATE),
         "visual_style": payload.get("visual_style"),
-        "duration_seconds": int(payload.get("duration_seconds", DEFAULT_DURATION_SECONDS)),
-        "scene_count": int(payload.get("scene_count", DEFAULT_SCENE_COUNT)),
-        "generate_background": bool(payload.get("generate_background", False)),
-        "generate_voiceover_placeholder": bool(payload.get("generate_voiceover_placeholder", False)),
-        "render_mp4": bool(payload.get("render_mp4", False)),
+        "duration_seconds": _int_or_raise(payload.get("duration_seconds", DEFAULT_DURATION_SECONDS), "duration_seconds"),
+        "scene_count": _int_or_raise(payload.get("scene_count", DEFAULT_SCENE_COUNT), "scene_count"),
+        "generate_background": _ensure_bool(payload.get("generate_background", False), "generate_background"),
+        "generate_voiceover_placeholder": _ensure_bool(
+            payload.get("generate_voiceover_placeholder", False), "generate_voiceover_placeholder"
+        ),
+        "render_mp4": _ensure_bool(payload.get("render_mp4", False), "render_mp4"),
     }
 
     seen_slugs: set[str] = set()
@@ -97,6 +107,10 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 merged.get("generate_voiceover_placeholder", False), f"items[{idx}].generate_voiceover_placeholder"
             )
             render_mp4 = _ensure_bool(merged.get("render_mp4", False), f"items[{idx}].render_mp4")
+            duration_seconds = _int_or_raise(merged.get("duration_seconds"), f"items[{idx}].duration_seconds")
+            scene_count = _int_or_raise(merged.get("scene_count"), f"items[{idx}].scene_count")
+            brand = str(merged.get("brand"))
+            visual_style = merged.get("visual_style")
 
             item_dir = output_dir / slug
             item_dir.mkdir(parents=True, exist_ok=True)
@@ -108,23 +122,36 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             voiceover_audio_path = str(wav_path) if generate_voiceover_placeholder else None
             background_image_path = str(png_path) if generate_background else None
 
+            resolved_style = resolve_visual_style(brand, visual_style)
             if generate_background:
-                generate_background_png(style=str(merged.get("visual_style") or "market_grid"), brand=str(merged.get("brand")), output=png_path)
+                generate_background_png(style=resolved_style, brand=brand, output=png_path)
                 entry["png_path"] = str(png_path)
-
-            storyboard = generate_storyboard(
-                topic=topic,
-                duration_seconds=int(merged.get("duration_seconds")),
-                scene_count=int(merged.get("scene_count")),
-                template=str(merged.get("template")),
-                brand=str(merged.get("brand")),
-                visual_style=merged.get("visual_style"),
-                background_image_path=background_image_path,
-                include_voiceover_script=generate_voiceover_placeholder,
-                voiceover_audio_path=voiceover_audio_path,
-            )
+                storyboard = generate_storyboard(
+                    topic=topic,
+                    duration_seconds=duration_seconds,
+                    scene_count=scene_count,
+                    template=str(merged.get("template")),
+                    brand=brand,
+                    visual_style=resolved_style,
+                    background_image_path=background_image_path,
+                    include_voiceover_script=generate_voiceover_placeholder,
+                    voiceover_audio_path=voiceover_audio_path,
+                )
+            else:
+                storyboard = generate_storyboard(
+                    topic=topic,
+                    duration_seconds=duration_seconds,
+                    scene_count=scene_count,
+                    template=str(merged.get("template")),
+                    brand=brand,
+                    visual_style=resolved_style,
+                    background_image_path=background_image_path,
+                    include_voiceover_script=generate_voiceover_placeholder,
+                    voiceover_audio_path=voiceover_audio_path,
+                )
             json_path.write_text(json.dumps(storyboard, indent=2), encoding="utf-8")
             entry["slug"] = slug
+            entry["topic"] = topic
             entry["json_path"] = str(json_path)
 
             if generate_voiceover_placeholder:
@@ -142,6 +169,10 @@ def run_batch(payload: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             summary_items.append(entry)
         except Exception as exc:
             entry.setdefault("slug", _slugify(str(raw_item.get("slug", ""))) if isinstance(raw_item, dict) else "")
+            if isinstance(raw_item, dict):
+                topic = str(raw_item.get("topic", "")).strip()
+                if topic:
+                    entry["topic"] = topic
             entry["status"] = "failed"
             entry["error"] = str(exc)
             summary_items.append(entry)
