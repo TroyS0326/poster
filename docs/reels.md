@@ -176,6 +176,7 @@ Batch writes a machine-readable summary file at:
 Batch also writes local operational logs for debugging:
 - `outputs/batch/run_report.md` (human-readable run report with counts + per-item table)
 - `outputs/batch/events.jsonl` (JSONL event stream with `batch_started`, `item_started`, `storyboard_written`, `background_written`, `voiceover_written`, `render_written`, `item_failed`, `item_completed`, `batch_completed`)
+- In `run_report.md`, `skipped_render_count` counts only successful items where `render_mp4` was not requested (`render_requested=false`); failed and render_failed items are not counted as skipped.
 
 Runtime behavior:
 - If `render_mp4=false`, MP4 rendering is skipped.
