@@ -74,3 +74,14 @@ def test_default_size_and_fps(tmp_path: Path) -> None:
     cfg = load_reel_config(_write(tmp_path, payload))
     assert cfg.size == (1080, 1920)
     assert cfg.fps == 24
+
+
+def test_voiceover_script_field_loads(tmp_path: Path) -> None:
+    payload = {
+        "title": "Hi",
+        "duration_seconds": 5,
+        "scenes": [{"text": "A", "duration": 5}],
+        "voiceover": {"enabled": True, "provider": "local_audio", "audio_path": "outputs/audio/a.wav", "script": "Scene A."},
+    }
+    cfg = load_reel_config(_write(tmp_path, payload))
+    assert cfg.voiceover.script == "Scene A."

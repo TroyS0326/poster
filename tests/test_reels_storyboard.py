@@ -287,3 +287,48 @@ def test_no_duplicate_banned_terms_constant_in_modules() -> None:
     visuals_text = Path("reels/visuals.py").read_text(encoding="utf-8")
     assert "BANNED_MARKETING_TERMS = [" not in storyboard_text
     assert "BANNED_MARKETING_TERMS = [" not in visuals_text
+
+
+def test_storyboard_without_voiceover_keeps_disabled() -> None:
+    payload = generate_storyboard(topic="Why rules matter")
+    assert payload["voiceover"]["enabled"] is False
+
+
+def test_storyboard_voiceover_script_flag_includes_script() -> None:
+    payload = generate_storyboard(topic="Why rules matter", include_voiceover_script=True)
+    assert payload["voiceover"]["script"].strip()
+    combined = " ".join(scene["text"].lower() for scene in payload["scenes"])
+    script = payload["voiceover"]["script"].lower()
+    assert any(word in script for word in ["rules", "risk", "process", "execution"])
+    assert not any(term in script for term in BANNED_MARKETING_TERMS)
+    assert combined
+
+
+def test_storyboard_voiceover_audio_sets_expected_fields() -> None:
+    audio_path = "outputs/audio/test.wav"
+    payload = generate_storyboard(topic="Why rules matter", voiceover_audio_path=audio_path)
+    assert payload["voiceover"]["enabled"] is True
+    assert payload["voiceover"]["provider"] == "local_audio"
+    assert payload["voiceover"]["audio_path"] == audio_path
+    assert payload["voiceover"]["script"].strip()
+
+
+def test_storyboard_voiceover_audio_rejects_invalid_extension() -> None:
+    with pytest.raises(ValueError, match="voiceover audio path"):
+        generate_storyboard(topic="Why rules matter", voiceover_audio_path="outputs/audio/test.txt")
+
+
+def test_storyboard_cli_voiceover_script_and_audio(tmp_path: Path) -> None:
+    output = tmp_path / "storyboard_voice.json"
+    result = subprocess.run(
+        [sys.executable, "-m", "reels.storyboard", "--topic", "Why most traders need rules, not motivation", "--voiceover-script", "--voiceover-audio", "outputs/audio/test.wav", "--output", str(output)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["voiceover"]["enabled"] is True
+    assert payload["voiceover"]["provider"] == "local_audio"
+    assert payload["voiceover"]["audio_path"] == "outputs/audio/test.wav"
+    assert payload["voiceover"]["script"].strip()

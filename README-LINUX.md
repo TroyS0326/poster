@@ -99,3 +99,5 @@ A separate module is available for local vertical MP4 reel generation without ch
 - One-command local PNG+JSON storyboard flow: add `--generate-background` (optionally `--background-output outputs/backgrounds/<name>.png`).
 
 - Reels storyboard supports `--visual-style`, and local style backgrounds can be generated with `python -m reels.backgrounds` into `outputs/`.
+
+- Reels supports optional local voiceover metadata and a silent placeholder WAV generator (`python -m reels.voiceover`) with no paid API requirement.

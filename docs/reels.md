@@ -64,6 +64,8 @@ Useful options:
 - `--visual-style` (`fintech_dark`, `workstation`, `abstract_risk`, `market_grid`, `minimal_gradient`; default uses brand pack)
 - `--generate-background` generates a local PNG background and writes storyboard JSON with `background.type=image`
 - `--background-output` optional `.png` path for generated background (default: `outputs/backgrounds/<safe_name>.png`); requires `--generate-background`
+- `--voiceover-script` adds a generated, compliance-checked narration script under `voiceover.script`
+- `--voiceover-audio` sets local audio metadata (`.mp3`, `.wav`, `.m4a`, `.aac`) and enables voiceover using provider `local_audio`
 
 Template structures stay concise for vertical overlays and adapt to scene count.
 
@@ -119,4 +121,31 @@ python -m reels.storyboard --brand xeanvi --template mistake --visual-style mark
 
 ```bash
 python -m reels.generate --input outputs/xeanvi_market_grid.json --output outputs/xeanvi_market_grid.mp4
+```
+
+
+### Placeholder voiceover audio generator (no external API)
+
+Generate a silent placeholder WAV that matches storyboard `duration_seconds`:
+
+```bash
+python -m reels.voiceover --input outputs/xeanvi_market_grid_voice.json --output outputs/audio/xeanvi_market_grid.wav
+```
+
+This creates **silent placeholder audio only** for pipeline validation. It is **not real TTS narration**.
+
+### Voiceover workflow
+
+1. Generate storyboard JSON + PNG background:
+```bash
+python -m reels.storyboard --brand xeanvi --template mistake --visual-style market_grid --generate-background --background-output outputs/backgrounds/xeanvi_market_grid.png --voiceover-script --voiceover-audio outputs/audio/xeanvi_market_grid.wav --topic "The cost of breaking your own trading rules" --output outputs/xeanvi_market_grid_voice.json
+```
+2. Generate silent WAV placeholder:
+```bash
+python -m reels.voiceover --input outputs/xeanvi_market_grid_voice.json --output outputs/audio/xeanvi_market_grid.wav
+```
+3. (Optional) You can also set `voiceover.audio_path` manually in JSON if you already have local audio.
+4. Render MP4:
+```bash
+python -m reels.generate --input outputs/xeanvi_market_grid_voice.json --output outputs/xeanvi_market_grid_voice.mp4
 ```

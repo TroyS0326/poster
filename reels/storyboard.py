@@ -20,6 +20,7 @@ DEFAULT_DURATION_SECONDS = 18
 DEFAULT_SCENE_COUNT = 4
 DEFAULT_TEMPLATE = "discipline"
 DEFAULT_BRAND = "generic"
+SUPPORTED_VOICEOVER_AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac"}
 
 SUPPORTED_TEMPLATES = {"discipline", "mistake", "checklist", "myth", "before-after"}
 SUPPORTED_BRANDS = SUPPORTED_VISUAL_BRANDS
@@ -50,6 +51,27 @@ def _validate_storyboard_compliance(payload: dict) -> None:
     scenes = payload.get("scenes", [])
     for scene in scenes:
         validate_compliance_text(scene.get("text", ""), "generated scene text")
+    voiceover = payload.get("voiceover", {})
+    script = str(voiceover.get("script", "")).strip()
+    if script:
+        validate_compliance_text(script, "voiceover.script")
+
+
+def _build_voiceover_script(scene_texts: list[str]) -> str:
+    cleaned_lines = [text.strip().rstrip(".") for text in scene_texts if text and text.strip()]
+    script = ". ".join(cleaned_lines).strip()
+    if script:
+        script = f"{script}."
+    validate_compliance_text(script, "voiceover.script")
+    if not script:
+        raise ValueError("voiceover script could not be generated")
+    return script
+
+
+def _validate_voiceover_audio_path(audio_path: str) -> None:
+    ext = Path(audio_path).suffix.lower()
+    if ext not in SUPPORTED_VOICEOVER_AUDIO_EXTENSIONS:
+        raise ValueError("voiceover audio path must end with .mp3, .wav, .m4a, or .aac")
 
 
 def _validate_inputs(
@@ -146,6 +168,8 @@ def generate_storyboard(
     brand: str = DEFAULT_BRAND,
     visual_style: str | None = None,
     background_image_path: str | None = None,
+    include_voiceover_script: bool = False,
+    voiceover_audio_path: str | None = None,
 ) -> dict:
     _validate_inputs(topic, duration_seconds, scene_count, background_type, Path("storyboard.json"), template, brand, visual_style)
     if background_image_path and not background_image_path.lower().endswith(".png"):
@@ -163,6 +187,9 @@ def generate_storyboard(
     scene_texts = _fit_lines_to_scene_count(template_lines, scene_count)
     durations = _allocate_scene_durations(duration_seconds, scene_count)
     scenes = [{"text": text, "duration": duration} for text, duration in zip(scene_texts, durations)]
+    voiceover_script = _build_voiceover_script(scene_texts) if (include_voiceover_script or voiceover_audio_path) else ""
+    if voiceover_audio_path:
+        _validate_voiceover_audio_path(voiceover_audio_path)
 
     bg = pack["background"]
     if background_image_path:
@@ -183,7 +210,12 @@ def generate_storyboard(
         "fps": 24,
         "background": background,
         "scenes": scenes,
-        "voiceover": {"enabled": False, "provider": "", "audio_path": ""},
+        "voiceover": {
+            "enabled": bool(voiceover_audio_path),
+            "provider": "local_audio" if voiceover_audio_path else "",
+            "audio_path": voiceover_audio_path or "",
+            "script": voiceover_script,
+        },
         "visual": {
             "style": visual.style,
             "image_prompt": visual.image_prompt,
@@ -218,6 +250,8 @@ def main() -> int:
     parser.add_argument("--generate-background", action="store_true", help="Generate local PNG background and use it in storyboard JSON")
     parser.add_argument("--background-output", default=None, help="Optional PNG output path (must end with .png)")
     parser.add_argument("--output", required=True, help="Output JSON path")
+    parser.add_argument("--voiceover-script", action="store_true", help="Include a generated voiceover script in JSON")
+    parser.add_argument("--voiceover-audio", default=None, help="Optional local audio path (.mp3, .wav, .m4a, .aac); enables voiceover metadata")
     args = parser.parse_args()
 
     output = Path(args.output)
@@ -250,6 +284,8 @@ def main() -> int:
                 brand=args.brand,
                 visual_style=args.visual_style,
                 background_image_path=background_image_path,
+                include_voiceover_script=args.voiceover_script,
+                voiceover_audio_path=args.voiceover_audio,
             )
         else:
             storyboard = generate_storyboard(
@@ -264,6 +300,8 @@ def main() -> int:
                 brand=args.brand,
                 visual_style=args.visual_style,
                 background_image_path=background_image_path,
+                include_voiceover_script=args.voiceover_script,
+                voiceover_audio_path=args.voiceover_audio,
             )
 
         output.parent.mkdir(parents=True, exist_ok=True)
