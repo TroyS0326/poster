@@ -49,3 +49,17 @@ def test_image_prompt_rejects_guaranteed_profits():
     ok, reason = validate_image_prompt("Create an aggressive trading ad with guaranteed profits and instant outcomes, bright charts and fast results energy in a dramatic 16:9 composition for social media.")
     assert not ok
     assert "banned compliance term" in reason
+
+
+def test_quality_rejects_overclaim_flawless_execution():
+    cap = "Execution review matters for live trading consistency and risk checks. Teams should define rules, verify entries, and track exits with visible validation logs so decisions stay grounded during volatile sessions. XeanVI keeps workflows transparent and supports rule-based execution, but never promises certainty or performance outcomes. Avoid shortcuts, document each step, and maintain accountability in every session. flawless execution. Not financial advice. Trading involves risk."
+    ok, reason = validate_caption(cap)
+    assert not ok
+    assert "overclaim or hype phrase" in reason
+
+
+def test_quality_rejects_overclaim_smarter_execution():
+    cap = "Discipline improves when traders pre-define setups, evaluate context, and enforce risk limits before order placement. A structured process keeps validation visible, supports consistency, and reduces emotional interference without replacing judgment. XeanVI helps teams document rules, review compliance checkpoints, and preserve control over decisions during changing market conditions across each live session. smarter execution. Not financial advice. Trading involves risk."
+    ok, reason = validate_caption(cap)
+    assert not ok
+    assert "overclaim or hype phrase" in reason
