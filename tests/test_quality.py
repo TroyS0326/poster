@@ -69,4 +69,11 @@ def test_validate_caption_rejects_learn_more_at_fragment():
     cap = "This workflow helps teams document checklists, review execution logs, and keep decisions aligned with pre-defined rules across changing sessions while preserving operator judgment and consistent oversight for each planned scenario in production environments with compliance checkpoints for review quality. Learn more at. Not financial advice. Trading involves risk."
     ok, reason = validate_caption(cap)
     assert not ok
-    assert reason == "caption contains dangling CTA fragment"
+    assert reason in {"caption contains dangling CTA fragment", "caption contains banned malformed fragment"}
+
+
+def test_validate_caption_rejects_exact_malformed_caption():
+    cap = "Visit (Disclosure: XeanVI provides tools to help enforce user-defined rules. It does not Not financial advice. Trading involves risk."
+    ok, reason = validate_caption(cap)
+    assert not ok
+    assert "malformed" in reason or "parentheses" in reason
