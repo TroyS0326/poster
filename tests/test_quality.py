@@ -24,3 +24,13 @@ def test_image_prompt_rejects_luxury_money_imagery():
     ok, reason = validate_image_prompt("Cinematic trading room with cash piles, yacht visuals, and fake PnL account balance screenshots, glowing luxury style, dark fintech mood, ultra detailed 16:9 composition")
     assert not ok
     assert "banned" in reason
+
+
+
+def test_risk_caption_becomes_valid_after_sanitization():
+    from prompts import sanitize_caption_policy
+
+    cap = "Bracket orders and live trading process need discipline, defined checks, and repeatable review loops to avoid emotional decisions."
+    sanitized = sanitize_caption_policy(cap, needs_disclosure=True, include_url=False)
+    ok, reason = validate_caption(sanitized)
+    assert ok, reason

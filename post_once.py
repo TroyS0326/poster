@@ -1,6 +1,6 @@
 from config import load_config, validate_required_config
 from logger_setup import setup_logger
-from scheduler import schedule_posts
+from scheduler import run_workflow
 
 
 def main():
@@ -10,8 +10,8 @@ def main():
     if not ok:
         logger.error("missing required configuration: %s", ", ".join(missing))
         raise SystemExit(1)
-    logger.info("XeanVI social bot starting; configured post interval is %s hour(s)", config.post_interval_hours)
-    schedule_posts(config, logger)
+    logger.info("XeanVI social bot running one workflow attempt via post_once")
+    run_workflow(config, logger)
 
 
 if __name__ == "__main__":

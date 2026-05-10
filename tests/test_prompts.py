@@ -26,3 +26,21 @@ def test_text_templates_are_explicitly_limited():
     text_enabled = [t for t in IMAGE_PROMPT_TEMPLATES if t["allows_text"]]
     assert len(text_enabled) == 2
     assert all("text" in t["prompt"].lower() for t in text_enabled)
+
+
+def test_short_caption_expands_to_minimum_words():
+    out = sanitize_caption_policy("Discipline first.", needs_disclosure=False, include_url=False)
+    assert len(out.split()) >= 45
+    assert DISCLOSURE not in out
+
+
+def test_non_risk_caption_no_forced_disclosure():
+    cap = "Product roadmap update with cleaner dashboards and stronger observability for operators."
+    out = sanitize_caption_policy(cap, needs_disclosure=False, include_url=False)
+    assert DISCLOSURE not in out
+
+
+def test_url_can_be_appended_and_deduplicated():
+    cap = f"Explore the platform {BRAND_URL}"
+    out = sanitize_caption_policy(cap, needs_disclosure=False, include_url=True)
+    assert out.count(BRAND_URL) == 1
