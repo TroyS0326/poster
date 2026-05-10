@@ -1,6 +1,6 @@
 import re
 
-from prompts import BLOCKED_PHRASES, BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, needs_risk_disclosure
+from prompts import BLOCKED_PHRASES, BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, needs_risk_disclosure, APPROVED_EMOJIS, MONEY_LUXURY_EMOJIS
 
 GENERIC_PHRASES = ["unlock your potential", "next level", "game changer", "cutting edge", "seamless experience"]
 BANNED_REGEX_PATTERNS = [
@@ -10,6 +10,8 @@ BANNED_REGEX_PATTERNS = [
 ]
 ALLOWED_URL_PATTERN = re.compile(r"https?://[^\s]+", re.IGNORECASE)
 BROKER_REGEX = re.compile(r"\b(alpaca|robinhood|fidelity|webull|etrade|e\*trade|schwab|binance|coinbase|kraken)\b", re.IGNORECASE)
+
+BANNED_IMAGE_TEXT_PATTERNS = ["add bold professional text", "add headline text", "add small footer text", "readable headline", "typography", "labeled sections", "text branding"]
 
 OVERCLAIM_PHRASES = [
     "flawless execution",
@@ -80,8 +82,30 @@ def validate_caption(caption: str) -> tuple[bool, str]:
     if any(fragment in lowered for fragment in dangling_cta_fragments):
         return False, "caption contains dangling CTA fragment"
 
+
+    hashtags = re.findall(r"(?<!\w)#\w+", caption)
+    if len(hashtags) != 4:
+        return False, "caption must include exactly 4 hashtags"
+    if "#XeanVI" not in hashtags:
+        return False, "caption must include #XeanVI"
+
+    if "🌈" in caption:
+        return False, "caption contains banned emoji"
+    emoji_pattern = re.compile("[" + "".join(re.escape(e) for e in APPROVED_EMOJIS + MONEY_LUXURY_EMOJIS + ["🌈"]) + "]")
+    found = emoji_pattern.findall(caption)
+    approved_count = sum(caption.count(e) for e in APPROVED_EMOJIS)
+    if approved_count > 1:
+        return False, "caption has more than one emoji"
+    if any(e in caption for e in MONEY_LUXURY_EMOJIS):
+        return False, "caption contains money/luxury emoji"
+    first_line = caption.splitlines()[0] if caption.splitlines() else ""
+    if approved_count == 1 and not any(e in first_line for e in APPROVED_EMOJIS):
+        return False, "emoji allowed only in hook line"
+
+    if caption.count(BRAND_URL) > 1:
+        return False, "duplicate URL"
     words = re.findall(r"\b\w+[\w'-]*\b", caption)
-    if len(words) < 45 or len(words) > 90:
+    if len(words) < 35 or len(words) > 140:
         return False, "caption word count out of range"
 
     needs = needs_risk_disclosure(caption)
@@ -127,4 +151,13 @@ def validate_image_prompt(prompt: str) -> tuple[bool, str]:
     if "add bold professional text" in lowered or "add headline text" in lowered:
         if not allows_text:
             return False, "image prompt text is only allowed in text-enabled templates"
+    lowered = prompt.lower()
+    for pat in BANNED_IMAGE_TEXT_PATTERNS:
+        if pat in lowered:
+            if pat == "typography" and "no typography" in lowered:
+                continue
+            return False, f"image prompt requests banned text directive: {pat}"
+    if re.search(r"\b(readable text|headline text|footer text|words|letters|labels?)\b", lowered):
+        if "no readable text" not in lowered and "no words" not in lowered and "no letters" not in lowered:
+            return False, "image prompt requests readable text"
     return True, "ok"
