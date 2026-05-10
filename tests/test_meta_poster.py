@@ -33,6 +33,7 @@ def _cfg(**overrides):
         post_to_facebook=True,
         post_to_instagram=True,
         meta_access_token="meta",
+        fb_page_access_token="",
         meta_graph_version="v20.0",
         fb_page_id="fb123",
         ig_business_id="ig123",
@@ -60,6 +61,39 @@ def test_post_to_meta_default_attempts_both(monkeypatch):
     assert result["facebook"]["status"] == "success"
     assert result["instagram"]["status"] == "success"
     assert len(calls) == 3
+    fb_call = next(data for url, data in calls if url.endswith("/photos"))
+    ig_calls = [data for url, data in calls if url.endswith("/media") or url.endswith("/media_publish")]
+    assert fb_call["access_token"] == "meta"
+    assert all(call["access_token"] == "meta" for call in ig_calls)
+
+
+def test_post_to_meta_uses_fb_page_access_token_when_present(monkeypatch):
+    calls = []
+
+    def fake_post(url, data, timeout):
+        calls.append((url, data))
+        if url.endswith("/media"):
+            return _Resp(payload={"id": "creation_1"})
+        if url.endswith("/media_publish"):
+            return _Resp(payload={"id": "publish_1"})
+        return _Resp(payload={"id": "fb_1"})
+
+    monkeypatch.setattr(meta_poster.requests, "post", fake_post)
+    monkeypatch.setattr(meta_poster, "_wait_for_ig_container_ready", lambda *_: {"ready": True, "response": {"status_code": "FINISHED"}})
+
+    result = meta_poster.post_to_meta(
+        "caption",
+        "https://img",
+        _cfg(meta_access_token="meta_token", fb_page_access_token="fb_page_token"),
+        _Logger(),
+    )
+
+    assert result["facebook"]["status"] == "success"
+    assert result["instagram"]["status"] == "success"
+    fb_call = next(data for url, data in calls if url.endswith("/photos"))
+    ig_calls = [data for url, data in calls if url.endswith("/media") or url.endswith("/media_publish")]
+    assert fb_call["access_token"] == "fb_page_token"
+    assert all(call["access_token"] == "meta_token" for call in ig_calls)
 
 
 def test_post_to_meta_skips_facebook_when_disabled(monkeypatch):

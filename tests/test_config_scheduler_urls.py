@@ -12,6 +12,7 @@ def _base_config(**overrides):
         replicate_model="model",
         replicate_output_format="jpg",
         meta_access_token="meta",
+        fb_page_access_token="",
         fb_page_id="fb",
         ig_business_id="ig",
         img_public_url_base="",
