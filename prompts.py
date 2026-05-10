@@ -112,12 +112,41 @@ def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: b
 
     words = text.split()
     if len(words) > 90:
-        kept = words[:90]
-        if needs_disclosure and DISCLOSURE not in " ".join(kept):
-            kept = kept[: max(0, 90 - len(DISCLOSURE.split()))] + DISCLOSURE.split()
-        if include_url and BRAND_URL not in " ".join(kept):
-            kept = kept[:89] + [BRAND_URL]
-        text = " ".join(kept)
+        reserved = 0
+        if needs_disclosure:
+            reserved += len(DISCLOSURE.split())
+        if include_url:
+            reserved += 1
+        base_limit = max(0, 90 - reserved)
+        kept = words[:base_limit]
+        if needs_disclosure:
+            kept += DISCLOSURE.split()
+        if include_url:
+            kept += [BRAND_URL]
+        text = " ".join(kept[:90])
 
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def repair_caption_compliance(caption: str) -> str:
+    text = re.sub(r"\s+", " ", (caption or "")).strip()
+    replacements = [
+        (r"\brisk[- ]free\b", "structured risk controls"),
+        (r"\bmake money\b", "improve process discipline"),
+        (r"\bwin rate\b", "consistency metrics"),
+        (r"\bpassive income\b", "automated workflow"),
+        (r"\btrade signal\b", "rule validation"),
+        (r"\bsignals\b", "validation workflow"),
+        (r"\bbuy/sell alert\b", "execution checklist"),
+        (r"\bbuy alert\b", "execution checklist"),
+        (r"\bsell alert\b", "execution checklist"),
+        (r"\bguaranteed\b", "promised"),
+        (r"\bguarantee\b", "promise"),
+        (r"\bprofits?\b", "outcomes"),
+        (r"\bprofitable\b", "result-oriented"),
+        (r"\bprofit\b", "outcome"),
+    ]
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", text).strip()

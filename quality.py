@@ -53,7 +53,23 @@ def validate_caption(caption: str) -> tuple[bool, str]:
 def validate_image_prompt(prompt: str) -> tuple[bool, str]:
     if not prompt or len(prompt.strip()) < 80:
         return False, "image prompt too short"
-    banned_match = _find_banned_match(prompt)
+    safe_negative_phrases = [
+        "no profit guarantees",
+        "no guaranteed returns",
+        "no profit promises",
+        "no profit claims",
+        "no profit screenshots",
+        "no fake profit screenshots",
+        "no exaggerated profits",
+        "no unrealistic claims",
+        "no guaranteed outcomes",
+        "no guaranteed results",
+    ]
+    sanitized_for_scan = prompt.lower()
+    for safe_phrase in safe_negative_phrases:
+        sanitized_for_scan = sanitized_for_scan.replace(safe_phrase, "")
+
+    banned_match = _find_banned_match(sanitized_for_scan)
     if banned_match:
         return False, f"image prompt contains banned compliance term: {banned_match}"
     lowered = prompt.lower()
