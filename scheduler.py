@@ -5,6 +5,7 @@ from text_ai import generate_content_package
 from image_ai import generate_image
 from uploader import upload_image
 from meta_poster import post_to_meta
+from meta_preflight import run_preflight
 
 
 def _package_fields(package: dict) -> tuple[str | None, str | None, str]:
@@ -41,6 +42,12 @@ def run_workflow(config, logger):
 
         if attempt == config.max_generation_attempts:
             logger.error("quality/workflow failed after %s attempts, skipping post", attempt)
+            return
+
+    if not config.dry_run and not config.manual_review_mode:
+        preflight = run_preflight()
+        if preflight["fb_page_id"] != "valid" or preflight["ig_business_id"] != "valid":
+            logger.error("meta preflight failed: %s", preflight)
             return
 
     caption, image_prompt, negative_prompt = _package_fields(package)
