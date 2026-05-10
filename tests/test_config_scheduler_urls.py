@@ -86,3 +86,27 @@ def test_scheduler_uses_remote_when_prefer_local_false(monkeypatch):
 
     scheduler.run_workflow(cfg, logger)
     assert captured["url"] == "https://replicate.delivery/x.jpg"
+
+
+
+def test_scheduler_sanitizes_before_validate_for_risk(monkeypatch):
+    cfg = SimpleNamespace(max_generation_attempts=1, manual_review_mode=True, dry_run=True, prefer_local_public_image_url=False)
+    logger = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None, error=lambda *a, **k: None, exception=lambda *a, **k: None)
+
+    candidate = {"caption": "Short note about live trading execution.", "image_prompt": "p", "negative_prompt": "", "pillar": "Risk controls", "archetype": "checklist"}
+    monkeypatch.setattr(scheduler, "generate_content_package", lambda *_: candidate.copy())
+
+    seen = {"caption": None}
+    def fake_validate_caption(c):
+        seen["caption"] = c
+        return True, "ok"
+
+    monkeypatch.setattr(scheduler, "validate_caption", fake_validate_caption)
+    monkeypatch.setattr(scheduler, "validate_image_prompt", lambda *_: (True, "ok"))
+    monkeypatch.setattr(scheduler, "generate_image", lambda *_: {"local_path": "images/generated/a.jpg", "remote_url": "https://replicate.delivery/x.jpg"})
+    monkeypatch.setattr(scheduler, "upload_image", lambda *_: "https://local.host/images/generated/a.jpg")
+    monkeypatch.setattr(scheduler, "post_to_meta", lambda *_: {"facebook": {"status": "skipped"}, "instagram": {"status": "skipped"}})
+
+    scheduler.run_workflow(cfg, logger)
+    assert seen["caption"] is not None
+    assert "Not financial advice. Trading involves risk." in seen["caption"]

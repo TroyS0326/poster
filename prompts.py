@@ -93,11 +93,31 @@ def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: b
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     text = re.sub(re.escape(DISCLOSURE), "", text, flags=re.IGNORECASE).strip()
     text = re.sub(re.escape(BRAND_URL), "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+
+    min_words = 45
+    if len(text.split()) < min_words:
+        filler = (
+            "Explore how XeanVI turns playbook rules into a more disciplined execution workflow. "
+            "It helps teams follow pre-defined checks, audit decisions, reduce impulsive actions, "
+            "and keep execution aligned with the plan across changing market conditions."
+        )
+        while len(text.split()) < min_words:
+            text = f"{text} {filler}".strip()
+
     if needs_disclosure:
         text = f"{text} {DISCLOSURE}".strip()
     if include_url:
         text = f"{text} {BRAND_URL}".strip()
+
     words = text.split()
     if len(words) > 90:
-        text = " ".join(words[:90])
+        kept = words[:90]
+        if needs_disclosure and DISCLOSURE not in " ".join(kept):
+            kept = kept[: max(0, 90 - len(DISCLOSURE.split()))] + DISCLOSURE.split()
+        if include_url and BRAND_URL not in " ".join(kept):
+            kept = kept[:89] + [BRAND_URL]
+        text = " ".join(kept)
+
+    text = re.sub(r"\s+", " ", text).strip()
     return text

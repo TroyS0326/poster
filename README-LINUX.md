@@ -114,3 +114,12 @@ For Reels Vast.ai deployment and operations, see docs/vast_reels_deploy.md
 - Reels publisher is available via `python -m reels.publish` and should be tested with `--dry-run` first before real posting.
 
 - Reels publishing/autopost docs: see docs/reels.md (public /reels/outputs route, dry-run publish, and 3-per-day autopost).
+
+## Entrypoints
+- `python main.py` = long-running scheduler entrypoint; it loops forever and does not return.
+- `python -m post_once` = runs one normal image-post workflow attempt and exits immediately.
+
+Commands:
+- Safe one-shot dry run: `DRY_RUN=true MANUAL_REVIEW_MODE=true python -m post_once`
+- Real one-shot attempt: `DRY_RUN=false MANUAL_REVIEW_MODE=false python -m post_once`
+- Long-running production scheduler: `DRY_RUN=false MANUAL_REVIEW_MODE=false python main.py`
