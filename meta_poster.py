@@ -81,6 +81,7 @@ def post_to_meta(caption: str, image_url: str, config, logger):
         }
 
     token = config.meta_access_token
+    fb_token = getattr(config, "fb_page_access_token", "") or token
 
     fb_enabled = getattr(config, "post_to_facebook", True)
     ig_enabled = getattr(config, "post_to_instagram", True)
@@ -91,7 +92,7 @@ def post_to_meta(caption: str, image_url: str, config, logger):
     if fb_enabled:
         _, fb_result = _safe_post(
             _graph_url(config.meta_graph_version, f"{config.fb_page_id}/photos"),
-            {"caption": caption, "url": image_url, "access_token": token},
+            {"caption": caption, "url": image_url, "access_token": fb_token},
             logger,
         )
     else:

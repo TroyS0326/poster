@@ -11,6 +11,7 @@ class Config:
     replicate_model: str
     replicate_output_format: str
     meta_access_token: str
+    fb_page_access_token: str
     fb_page_id: str
     ig_business_id: str
     img_public_url_base: str
@@ -47,6 +48,7 @@ def load_config() -> Config:
         replicate_model=os.getenv("REPLICATE_MODEL", "black-forest-labs/flux-schnell"),
         replicate_output_format=os.getenv("REPLICATE_OUTPUT_FORMAT", "jpg").strip().lower() or "jpg",
         meta_access_token=os.getenv("META_ACCESS_TOKEN", ""),
+        fb_page_access_token=os.getenv("FB_PAGE_ACCESS_TOKEN", ""),
         fb_page_id=os.getenv("FB_PAGE_ID", ""),
         ig_business_id=os.getenv("IG_BUSINESS_ID", ""),
         img_public_url_base=os.getenv("IMG_PUBLIC_URL_BASE", ""),
