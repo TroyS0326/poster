@@ -1,8 +1,7 @@
 import random
-import re
 import time
 from quality import validate_caption, validate_image_prompt
-from prompts import needs_risk_disclosure, repair_caption_compliance, should_include_url, sanitize_caption_policy
+from prompts import build_caption, needs_risk_disclosure, should_include_url
 from text_ai import generate_content_package
 from image_ai import generate_image
 from uploader import upload_image
@@ -34,18 +33,10 @@ def run_workflow(config, logger):
             logger.info("caption generated")
             pillar = candidate.get("pillar", "")
             archetype = candidate.get("archetype", "")
-            repaired_caption = repair_caption_compliance(caption)
-            needs_disclosure = needs_risk_disclosure(f"{pillar} {archetype} {repaired_caption}")
+            needs_disclosure = needs_risk_disclosure(f"{pillar} {archetype} {caption}")
             include_url = should_include_url(pillar, archetype)
-            sanitized_caption = sanitize_caption_policy(repaired_caption, needs_disclosure, include_url)
-            sanitized_caption = re.sub(r"\bVisit:\s*\.?", "", sanitized_caption, flags=re.IGNORECASE).strip()
-            sanitized_caption = re.sub(r"\bLearn more:\s*\.?", "", sanitized_caption, flags=re.IGNORECASE).strip()
-            if sanitized_caption.lower().count("trading involves risk") > 1 or sanitized_caption.lower().count("not financial advice") > 1:
-                sanitized_caption = sanitize_caption_policy(sanitized_caption, needs_disclosure, include_url)
-            if sanitized_caption.lower().count("xeanvi.com") > 1:
-                sanitized_caption = sanitize_caption_policy(sanitized_caption, needs_disclosure, include_url)
-            candidate["caption"] = sanitized_caption
-            caption = sanitized_caption
+            candidate["caption"] = build_caption(pillar, archetype, include_url, needs_disclosure)
+            caption = candidate["caption"]
             cap_ok, cap_reason = validate_caption(caption)
             prm_ok, prm_reason = validate_image_prompt(image_prompt)
             logger.info("caption quality %s (%s)", "passed" if cap_ok else "failed", cap_reason)

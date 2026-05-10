@@ -1,4 +1,4 @@
-from prompts import BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
+from prompts import BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, build_caption, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
 
 
 def test_disclosure_needed_for_risk_terms():
@@ -146,3 +146,31 @@ def test_sanitize_allows_clean_disclosure_and_url_ending():
     )
     assert out.endswith(f"{DISCLOSURE} {BRAND_URL}")
     assert "learn more at." not in out.lower()
+
+
+def test_build_caption_word_count_range():
+    cap = build_caption("Risk controls before entries", "checklist", include_url=False, needs_disclosure=True)
+    assert 45 <= len(cap.split()) <= 90
+
+
+def test_build_caption_disclosure_exactly_once_when_required():
+    cap = build_caption("Risk controls before entries", "checklist", include_url=False, needs_disclosure=True)
+    assert cap.count(DISCLOSURE) == 1
+
+
+def test_build_caption_without_disclosure_when_not_required():
+    cap = build_caption("Founder/build-in-public", "founder note", include_url=False, needs_disclosure=False)
+    assert DISCLOSURE not in cap
+
+
+def test_build_caption_url_exactly_once_when_requested():
+    cap = build_caption("Trust/transparency", "founder note", include_url=True, needs_disclosure=False)
+    assert cap.count(BRAND_URL) == 1
+
+
+def test_build_caption_never_has_forbidden_cta_fragments():
+    cap = build_caption("Risk controls", "checklist", include_url=True, needs_disclosure=True)
+    lowered = cap.lower()
+    assert "visit" not in lowered
+    assert "learn more at" not in lowered
+    assert "disclosure:" not in lowered

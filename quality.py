@@ -40,9 +40,6 @@ def _find_banned_match(text: str) -> str | None:
 def validate_caption(caption: str) -> tuple[bool, str]:
     if not caption or not caption.strip():
         return False, "empty caption"
-    words = re.findall(r"\b\w+[\w'-]*\b", caption)
-    if len(words) < 45 or len(words) > 90:
-        return False, "caption word count out of range"
     banned_match = _find_banned_match(caption)
     if banned_match:
         return False, f"caption contains banned compliance term: {banned_match}"
@@ -55,8 +52,22 @@ def validate_caption(caption: str) -> tuple[bool, str]:
         if phrase in lowered:
             return False, f"caption contains overclaim or hype phrase: {phrase}"
 
-    dangling_cta_fragments = [
-        "learn more at.",
+    hard_banned_fragments = [
+        "visit",
+        "learn more at",
+        "disclosure:",
+        "it does not not financial advice",
+    ]
+    if any(fragment in lowered for fragment in hard_banned_fragments):
+        return False, "caption contains banned malformed fragment"
+    if lowered.count("not financial advice") > 1:
+        return False, "duplicate Not financial advice"
+    if lowered.count("trading involves risk") > 1:
+        return False, "duplicate Trading involves risk"
+    if caption.count("(") != caption.count(")"):
+        return False, "caption has malformed parentheses"
+
+    dangling_cta_fragments = [        "learn more at.",
         "visit at.",
         "visit: .",
         "learn more: .",
@@ -68,6 +79,10 @@ def validate_caption(caption: str) -> tuple[bool, str]:
     ]
     if any(fragment in lowered for fragment in dangling_cta_fragments):
         return False, "caption contains dangling CTA fragment"
+
+    words = re.findall(r"\b\w+[\w'-]*\b", caption)
+    if len(words) < 45 or len(words) > 90:
+        return False, "caption word count out of range"
 
     needs = needs_risk_disclosure(caption)
     has = DISCLOSURE.lower() in caption.lower()

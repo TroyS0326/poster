@@ -92,6 +92,45 @@ def should_include_url(pillar: str, archetype: str, seed: int | None = None) -> 
     return rng.random() < 0.42
 
 
+def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosure: bool) -> str:
+    pillar_txt = (pillar or "process discipline").strip().lower()
+    archetype_txt = (archetype or "lesson learned").strip().lower()
+
+    hook = {
+        "confession": "I used to think more screen time meant better outcomes, but it usually meant more noise.",
+        "hard truth": "Hard truth: discipline is built before the trade, not after the chart moves.",
+        "mini story": "A quick story: one rushed decision can undo hours of careful preparation.",
+        "myth vs reality": "Myth: speed alone wins. Reality: structure and review keep decisions consistent.",
+        "founder note": "Founder note: every workflow decision starts with clarity before automation.",
+        "trader mistake breakdown": "Common mistake: reacting first and documenting later creates repeated errors.",
+        "checklist": "Checklist mindset beats impulse when market pressure starts to climb.",
+        "one sharp rule": "One sharp rule: if the setup misses your criteria, skip it without negotiation.",
+        "behind the product": "Behind the product, we focus on visibility, controls, and accountable execution steps.",
+        "quiet warning": "Quiet warning: small rule breaks compound faster than most people expect.",
+        "before/after mindset": "Before: chasing every move. After: following a defined process and accepting patience.",
+        "lesson learned": "Lesson learned: repeatable process matters more than dramatic single-session decisions.",
+    }.get(archetype_txt, "Discipline starts with clear rules and measured decisions.")
+
+    insight = f"For {pillar_txt}, define conditions in advance, review risk before action, and log what qualified or failed the setup so future decisions stay grounded."
+    tie_in = "XeanVI helps enforce user-defined rules, keeps validation visible, and supports rule-based execution without replacing judgment."
+    cta = f"Explore XeanVI: {BRAND_URL}" if include_url else "Build the process before the pressure hits."
+
+    caption = f"{hook} {insight} {tie_in} {cta}"
+    if needs_disclosure:
+        caption = f"{caption} {DISCLOSURE}"
+
+    words = caption.split()
+    if len(words) > 90:
+        reserved = len(DISCLOSURE.split()) if needs_disclosure else 0
+        reserved += 3 if include_url else len("Build the process before the pressure hits.".split())
+        core_limit = max(1, 90 - reserved)
+        core = " ".join((f"{hook} {insight} {tie_in}").split()[:core_limit])
+        caption = f"{core} {cta}"
+        if needs_disclosure:
+            caption = f"{caption} {DISCLOSURE}"
+    return re.sub(r"\s+", " ", caption).strip()
+
+
 def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: bool) -> str:
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     text = re.sub(re.escape(DISCLOSURE), "", text, flags=re.IGNORECASE).strip()

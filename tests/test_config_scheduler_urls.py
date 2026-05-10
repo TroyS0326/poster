@@ -209,3 +209,34 @@ def test_scheduler_final_caption_repaired_before_validate_has_no_overclaims(monk
     lowered = seen["caption"].lower()
     for phrase in ["flawless execution", "smarter execution", "freeing you from emotional pitfalls"]:
         assert phrase not in lowered
+
+
+def test_scheduler_replaces_malformed_gemini_caption_with_deterministic(monkeypatch):
+    cfg = SimpleNamespace(max_generation_attempts=1, manual_review_mode=True, dry_run=True, prefer_local_public_image_url=False)
+    logger = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None, error=lambda *a, **k: None, exception=lambda *a, **k: None)
+    candidate = {
+        "caption": "Visit (Disclosure: XeanVI provides tools to help enforce user-defined rules. It does not Not financial advice. Trading involves risk.",
+        "image_prompt": "p",
+        "negative_prompt": "",
+        "pillar": "Risk controls",
+        "archetype": "checklist",
+    }
+    monkeypatch.setattr(scheduler, "generate_content_package", lambda *_: candidate.copy())
+    seen = {"caption": None}
+
+    def fake_validate_caption(caption):
+        seen["caption"] = caption
+        return True, "ok"
+
+    monkeypatch.setattr(scheduler, "validate_caption", fake_validate_caption)
+    monkeypatch.setattr(scheduler, "validate_image_prompt", lambda *_: (True, "ok"))
+    monkeypatch.setattr(scheduler, "generate_image", lambda *_: {"local_path": "images/generated/a.jpg", "remote_url": "https://replicate.delivery/x.jpg"})
+    monkeypatch.setattr(scheduler, "upload_image", lambda *_: "https://local.host/images/generated/a.jpg")
+    monkeypatch.setattr(scheduler, "post_to_meta", lambda *_: {"facebook": {"status": "skipped"}, "instagram": {"status": "skipped"}})
+
+    scheduler.run_workflow(cfg, logger)
+    assert seen["caption"] is not None
+    lowered = seen["caption"].lower()
+    assert "visit" not in lowered
+    assert "learn more at" not in lowered
+    assert "disclosure:" not in lowered
