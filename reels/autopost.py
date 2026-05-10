@@ -115,8 +115,10 @@ def run_autopost(
                     if provider_cfg.provider == "comfy":
                         storyboard = {"title": getattr(cfg_obj, "title", ""), "scenes": [{"text": s.text} for s in getattr(cfg_obj, "scenes", [])]}
                         generated_scene_clips = ensure_scene_video_clips(storyboard, item_dir, provider_cfg)
-                    manifest = os.getenv("REELS_VIDEO_MANIFEST", "assets/reels/video_manifest.json")
-                    clips = load_video_manifest(manifest) if provider_cfg.provider != "none" else []
+                    clips = []
+                    if provider_cfg.provider != "none" and not generated_scene_clips:
+                        manifest = os.getenv("REELS_VIDEO_MANIFEST", "assets/reels/video_manifest.json")
+                        clips = load_video_manifest(manifest)
                     render_video_reel(cfg_obj, mp4_path, clips=clips, generated_scene_clips=generated_scene_clips)
                 else:
                     raise ValueError(f"Unknown REELS_RENDERER: {renderer}")

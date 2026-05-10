@@ -74,3 +74,57 @@ def test_autopost_video_comfy_clip_failure_marks_render_failed(monkeypatch, tmp_
     monkeypatch.setattr(autopost, "publish_reel", lambda **k: (_ for _ in ()).throw(RuntimeError("should not call")))
     result = autopost.run_autopost(q, "day_03", "https://example", dry_run=True)
     assert result["items"][0]["status"] == "render_failed"
+
+
+def test_autopost_video_comfy_generated_clips_skip_manifest(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    q = _prep(tmp_path)
+    _set_cfg(monkeypatch)
+    monkeypatch.setenv("REELS_RENDERER", "video")
+    monkeypatch.setenv("REELS_VIDEO_PROVIDER", "comfy")
+    monkeypatch.setenv("COMFYUI_PROMPT_NODE_ID", "1")
+
+    called = {"manifest": 0, "render": 0}
+
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: type("Cfg", (), {"title": "t", "scenes": [type("S", (), {"text": "x"})()]})())
+    monkeypatch.setattr(autopost, "ensure_scene_video_clips", lambda storyboard, item_dir, config=None: [str(item_dir / "video_scene_01.mp4")])
+
+    def _manifest(_):
+        called["manifest"] += 1
+        raise AssertionError("load_video_manifest should not be called when generated clips exist")
+
+    def _render(cfg, out, clips, generated_scene_clips=None):
+        called["render"] += 1
+        assert clips == []
+        assert generated_scene_clips and generated_scene_clips[0].endswith("video_scene_01.mp4")
+        Path(out).write_bytes(b"x")
+
+    monkeypatch.setattr(autopost, "load_video_manifest", _manifest)
+    monkeypatch.setattr(autopost, "render_video_reel", _render)
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "planned"}, "facebook": {"status": "planned"}, "video_url": "u"})
+
+    autopost.run_autopost(q, "day_03", "https://example", dry_run=True)
+    assert called["manifest"] == 0
+    assert called["render"] == 1
+
+
+def test_autopost_video_manifest_provider_loads_manifest(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    q = _prep(tmp_path)
+    _set_cfg(monkeypatch)
+    monkeypatch.setenv("REELS_RENDERER", "video")
+    monkeypatch.setenv("REELS_VIDEO_PROVIDER", "manifest")
+
+    called = {"manifest": 0}
+    monkeypatch.setattr(autopost, "load_reel_config", lambda p: object())
+
+    def _manifest(path):
+        called["manifest"] += 1
+        return [object()]
+
+    monkeypatch.setattr(autopost, "load_video_manifest", _manifest)
+    monkeypatch.setattr(autopost, "render_video_reel", lambda cfg, out, clips, generated_scene_clips=None: Path(out).write_bytes(b"x"))
+    monkeypatch.setattr(autopost, "publish_reel", lambda **k: {"instagram": {"status": "planned"}, "facebook": {"status": "planned"}, "video_url": "u"})
+
+    autopost.run_autopost(q, "day_03", "https://example", dry_run=True)
+    assert called["manifest"] == 1
