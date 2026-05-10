@@ -97,14 +97,30 @@ def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: b
     text = re.sub(re.escape(DISCLOSURE), "", text, flags=re.IGNORECASE).strip()
     text = re.sub(r"\.?\s*Trading involves risk\.", "", text, flags=re.IGNORECASE).strip()
     text = re.sub(r"Not financial advice\.", "", text, flags=re.IGNORECASE).strip()
-    text = re.sub(r"\bVisit:\s*\.?", "", text, flags=re.IGNORECASE).strip()
-    text = re.sub(r"\bLearn more:\s*\.?", "", text, flags=re.IGNORECASE).strip()
-    text = re.sub(r"\bSee more:\s*\.?", "", text, flags=re.IGNORECASE).strip()
     text = re.sub(re.escape(BRAND_URL), "", text, flags=re.IGNORECASE).strip()
+
+    dangling_cta_patterns = [
+        r"visit:\s*\.?",
+        r"visit\.",
+        r"visit at\.",
+        r"learn more:\s*\.?",
+        r"learn more\.",
+        r"learn more at\.",
+        r"explore more at\.",
+        r"see more at\.",
+        r"find out more at\.",
+        r"check it out at\.",
+        r"go to\.",
+        r"go to:",
+    ]
+    for pattern in dangling_cta_patterns:
+        text = re.sub(rf"\b{pattern}", "", text, flags=re.IGNORECASE).strip()
+
     text = re.sub(r"(?:\s*[.!?,:;]){2,}", ".", text)
     text = re.sub(r"\s+([.!?,:;])", r"\1", text)
     text = re.sub(r"([.!?,:;])\1+", r"\1", text)
-    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"[\s]*([:;,.!?])[\s]*([:;,.!?])", r"\1", text)
+    text = re.sub(r"\s+", " ", text).strip(" .:;")
 
     min_words = 45
     if len(text.split()) < min_words:
@@ -152,6 +168,7 @@ def repair_caption_compliance(caption: str) -> str:
         (r"\bempowers you to transform\b", "helps you turn"),
         (r"\btransform your disciplined approach\b", "turn your defined process"),
         (r"\btransform hesitation into decisive action\b", "Turn hesitation into a more structured review process"),
+        (r"\belevate your practice\b", "Build a more structured practice routine"),
         (r"\belevate your trading discipline\b", "Build a more disciplined trading process"),
         (r"\bexplore smarter execution\b", "review a more structured execution workflow"),
         (r"\bsmarter execution\b", "structured execution"),
@@ -172,6 +189,9 @@ def repair_caption_compliance(caption: str) -> str:
         (r"\bguarantee\b", "promise"),
         (r"\bprofits?\b", "outcomes"),
         (r"\bprofitable\b", "result-oriented"),
+        (r"\bwinning virtual trades\b", "passing simulated trades"),
+        (r"\bpowerful learning experience\b", "structured review process"),
+        (r"\breal capital is on the line\b", "live capital is involved"),
         (r"\bprofit\b", "outcome"),
     ]
     for pattern, replacement in replacements:

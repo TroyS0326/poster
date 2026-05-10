@@ -55,6 +55,20 @@ def validate_caption(caption: str) -> tuple[bool, str]:
         if phrase in lowered:
             return False, f"caption contains overclaim or hype phrase: {phrase}"
 
+    dangling_cta_fragments = [
+        "learn more at.",
+        "visit at.",
+        "visit: .",
+        "learn more: .",
+        "explore more at.",
+        "see more at.",
+        "find out more at.",
+        "check it out at.",
+        "go to.",
+    ]
+    if any(fragment in lowered for fragment in dangling_cta_fragments):
+        return False, "caption contains dangling CTA fragment"
+
     needs = needs_risk_disclosure(caption)
     has = DISCLOSURE.lower() in caption.lower()
     if needs and not has:

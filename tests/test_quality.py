@@ -63,3 +63,10 @@ def test_quality_rejects_overclaim_smarter_execution():
     ok, reason = validate_caption(cap)
     assert not ok
     assert "overclaim or hype phrase" in reason
+
+
+def test_validate_caption_rejects_learn_more_at_fragment():
+    cap = "This workflow helps teams document checklists, review execution logs, and keep decisions aligned with pre-defined rules across changing sessions while preserving operator judgment and consistent oversight for each planned scenario in production environments with compliance checkpoints for review quality. Learn more at. Not financial advice. Trading involves risk."
+    ok, reason = validate_caption(cap)
+    assert not ok
+    assert reason == "caption contains dangling CTA fragment"

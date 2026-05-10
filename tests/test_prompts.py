@@ -109,3 +109,40 @@ def test_repair_replaces_elevate_your_trading_discipline():
     repaired = repair_caption_compliance("Elevate your trading discipline with routine reviews.")
     assert "elevate your trading discipline" not in repaired.lower()
     assert "Build a more disciplined trading process" in repaired
+
+
+def test_sanitize_removes_learn_more_at_fragment():
+    out = sanitize_caption_policy("Refine process discipline. Learn more at.", needs_disclosure=False, include_url=False)
+    assert "learn more at." not in out.lower()
+
+
+def test_sanitize_removes_visit_at_fragment():
+    out = sanitize_caption_policy("Review your checklist. Visit at.", needs_disclosure=False, include_url=False)
+    assert "visit at." not in out.lower()
+
+
+def test_sanitize_removes_explore_more_at_fragment():
+    out = sanitize_caption_policy("Improve review quality. Explore more at.", needs_disclosure=False, include_url=False)
+    assert "explore more at." not in out.lower()
+
+
+def test_repair_replaces_elevate_your_practice():
+    repaired = repair_caption_compliance("Elevate your practice with repeatable drills.")
+    assert "elevate your practice" not in repaired.lower()
+    assert "Build a more structured practice routine" in repaired
+
+
+def test_repair_replaces_winning_virtual_trades():
+    repaired = repair_caption_compliance("The objective is winning virtual trades before going live.")
+    assert "winning virtual trades" not in repaired.lower()
+    assert "passing simulated trades" in repaired.lower()
+
+
+def test_sanitize_allows_clean_disclosure_and_url_ending():
+    out = sanitize_caption_policy(
+        "Elevate your practice. Learn more at.",
+        needs_disclosure=True,
+        include_url=True,
+    )
+    assert out.endswith(f"{DISCLOSURE} {BRAND_URL}")
+    assert "learn more at." not in out.lower()
