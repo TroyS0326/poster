@@ -62,6 +62,7 @@ def test_scheduler_uses_upload_when_prefer_local_true(monkeypatch):
         return {"facebook": {"status": "ok"}, "instagram": {"status": "ok"}}
 
     monkeypatch.setattr(scheduler, "post_to_meta", fake_post_to_meta)
+    monkeypatch.setattr(scheduler, "run_preflight", lambda: {"fb_page_id": "valid", "ig_business_id": "valid"})
 
     scheduler.run_workflow(cfg, logger)
     assert captured["url"] == "https://local.host/images/generated/a.jpg"
@@ -81,6 +82,7 @@ def test_scheduler_uses_remote_when_prefer_local_false(monkeypatch):
         return {"facebook": {"status": "ok"}, "instagram": {"status": "ok"}}
 
     monkeypatch.setattr(scheduler, "post_to_meta", fake_post_to_meta)
+    monkeypatch.setattr(scheduler, "run_preflight", lambda: {"fb_page_id": "valid", "ig_business_id": "valid"})
 
     scheduler.run_workflow(cfg, logger)
     assert captured["url"] == "https://replicate.delivery/x.jpg"
