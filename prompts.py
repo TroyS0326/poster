@@ -25,19 +25,22 @@ POST_ARCHETYPES = [
 ]
 
 IMAGE_PROMPT_TEMPLATES = [
-    {"id": "p1", "allows_text": True, "prompt": "Create a cinematic dark navy and electric blue promotional image for XeanVI, an AI-powered automated trading execution platform for retail day traders. Show a futuristic trading dashboard on a large angled monitor with candlestick charts, live market scan panels, risk status, bot status, active positions, automation log, and rule validation indicators. Add bold professional text: \"AUTOMATE. EXECUTE. TRADE WITH DISCIPLINE.\" Use a clean fintech style, high contrast lighting, glowing blue UI accents, premium SaaS branding, no profit guarantees, no clutter, ultra sharp, 16:9 wide banner."},
-    {"id": "p2", "allows_text": False, "prompt": "Create a realistic cinematic image of a focused trader sitting at a modern desk at night, looking at multiple trading screens with candlestick charts, risk controls, and automated playbook validation steps. Add subtle holographic icons showing a playbook, automation gear, rule tree, broker connection, and approval checkmark. Dark office background, blue and teal lighting, professional fintech aesthetic, no text, no exaggerated profits, trustworthy and disciplined trading mood, ultra detailed, 16:9."},
-    {"id": "p3", "allows_text": False, "prompt": "Create a high-end trading command center scene with six monitors showing dark-mode trading dashboards, candlestick charts, market scanner panels, performance analytics, watchlists, order flow, and automation workflow diagrams. Empty chair in front of the desk, modern office environment, moody dark lighting, electric blue accents, realistic screens, clean professional SaaS fintech look, no text, no profit promises, ultra sharp, 1:1 square."},
-    {"id": "p4", "allows_text": False, "prompt": "Create a futuristic AI data pipeline visualization for an automated trading platform. Show a large curved monitor inside a server room displaying a dark-mode flowchart: data ingestion, market scanning, preprocessing, feature extraction, playbook rules, risk checks, broker execution, and output analysis. Use electric blue neon lines, technical UI elements, neural network diagram, charts, logs, and system status panels. Premium cybersecurity-fintech style, no text branding, no profit claims, ultra detailed, 16:9."},
-    {"id": "p5", "allows_text": False, "prompt": "Create a dark premium SaaS hero image for an automated trading bot named XeanVI. Show a sleek dashboard interface with sections labeled market scanner, playbook rules, broker connection, risk manager, paper trading, and automation status. Include glowing blue charts, bracket order visualization, stop-loss and target markers, and a clear rules validated style status indicator. Clean professional fintech design, trustworthy, disciplined, no guaranteed returns, 16:9."},
-    {"id": "p6", "allows_text": False, "prompt": "Create a realistic professional trader workstation at night with multiple monitors showing algorithmic trading dashboards, scanner results, risk controls, and automated execution logs. Use dark navy, black, electric blue, and teal color grading. The scene should feel disciplined, secure, and professional, like a trading operations command center. No money piles, no luxury lifestyle, no unrealistic claims, no text, ultra realistic, cinematic, 16:9."},
-    {"id": "p7", "allows_text": False, "prompt": "Create a futuristic trading automation interface floating over a dark background. Show candlestick charts, rule validation checklists, broker API connection status, bracket order path, risk limit gauges, and automation timeline logs. Use blue neon highlights, glassmorphism panels, clean UI hierarchy, premium fintech branding style, high trust, no human faces, no profit guarantees, ultra sharp, 16:9."},
-    {"id": "p8", "allows_text": True, "prompt": "Create a professional social media graphic for XeanVI, an automated trading execution engine. Dark navy background, glowing blue trading dashboard, AI scanner panel, risk manager module, playbook validation flow, and broker execution status. Add headline text: \"YOUR PLAYBOOK. YOUR RULES. AUTOMATED EXECUTION.\" Add small footer text: \"Your account. Your funds. Your control.\" Premium fintech style, clean typography, no profit promises, 16:9."},
+    {"id": "p1", "allows_text": False, "prompt": "Create a cinematic dark navy and electric blue promotional image for XeanVI, an AI-powered automated trading execution platform for retail day traders. Show a futuristic trading dashboard on a large angled monitor with candlestick charts, live market scan panels, risk status, bot status, active positions, automation log, and rule validation indicators. Use a clean fintech style, high contrast lighting, glowing blue UI accents, premium SaaS branding, no profit guarantees, no clutter, ultra sharp, 16:9 wide banner, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p2", "allows_text": False, "prompt": "Create a realistic cinematic image of a focused trader sitting at a modern desk at night, looking at multiple trading screens with candlestick charts, risk controls, and automated playbook validation steps. Add subtle holographic icons showing a playbook, automation gear, rule tree, broker connection, and approval checkmark. Dark office background, blue and teal lighting, professional fintech aesthetic, no exaggerated profits, trustworthy and disciplined trading mood, ultra detailed, 16:9, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p3", "allows_text": False, "prompt": "Create a high-end trading command center scene with six monitors showing dark-mode trading dashboards, candlestick charts, market scanner panels, performance analytics, watchlists, order flow, and automation workflow diagrams. Empty chair in front of the desk, modern office environment, moody dark lighting, electric blue accents, realistic screens, clean professional SaaS fintech look, no profit promises, ultra sharp, 1:1 square, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p4", "allows_text": False, "prompt": "Create a futuristic AI data pipeline visualization for an automated trading platform. Show a large curved monitor inside a server room displaying a dark-mode workflow for data ingestion, market scanning, preprocessing, feature extraction, playbook rules, risk checks, broker execution, and output analysis. Use electric blue neon lines, technical UI elements, neural network diagram, charts, logs, and system status panels. Premium cybersecurity-fintech style, no profit claims, ultra detailed, 16:9, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p5", "allows_text": False, "prompt": "Create a dark premium SaaS hero image for an automated trading bot named XeanVI. Show a sleek dashboard interface with market scanning panels, playbook rule blocks, broker connection modules, risk manager flows, paper trading states, and automation status indicators. Include glowing blue charts, bracket order visualization, stop-loss and target markers, and clear rules-validated style indicators. Clean professional fintech design, trustworthy and disciplined, no guaranteed returns, 16:9, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p6", "allows_text": False, "prompt": "Create a realistic professional trader workstation at night with multiple monitors showing algorithmic trading dashboards, scanner results, risk controls, and automated execution logs. Use dark navy, black, electric blue, and teal color grading. The scene should feel disciplined, secure, and professional, like a trading operations command center. No money piles, no luxury lifestyle, no unrealistic claims, ultra realistic, cinematic, 16:9, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p7", "allows_text": False, "prompt": "Create a futuristic trading automation interface floating over a dark background. Show candlestick charts, rule validation checklists, broker API connection status, bracket order path, risk limit gauges, and automation timeline logs. Use blue neon highlights, glassmorphism panels, clean UI hierarchy, premium fintech style, high trust, no human faces, no profit guarantees, ultra sharp, 16:9, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
+    {"id": "p8", "allows_text": False, "prompt": "Create a professional social media graphic for XeanVI, an automated trading execution engine. Dark navy background, glowing blue trading dashboard, AI scanner panels, risk manager modules, playbook validation flows, and broker execution status blocks. Premium fintech style, no profit promises, 16:9, abstract UI panels, non-readable interface blocks, no readable text, no letters, no words, no typography, no logos."},
 ]
 VISUAL_DIRECTIONS = [f"template:{p['id']}" for p in IMAGE_PROMPT_TEMPLATES]
 
 DISCLOSURE = "Not financial advice. Trading involves risk."
 BRAND_URL = "https://xeanvi.com"
+APPROVED_EMOJIS = ["🧠", "⚙️", "📊", "✅", "🛡️", "🔍"]
+MONEY_LUXURY_EMOJIS = ["💰", "💸", "🤑", "💎", "🏎️", "🚘", "🛥️", "🛩️", "🏰", "👑"]
+HASHTAG_POOL = ["#XeanVI", "#TradingDiscipline", "#RuleBasedExecution", "#RiskControls", "#TradingPlaybook", "#PaperTrading", "#ExecutionDiscipline", "#TradingAutomation", "#DayTrading", "#TradeManagement", "#ProcessOverImpulse", "#TradingRules", "#MarketScanner", "#BracketOrders"]
 RISK_TERMS = {"trading", "live trading", "execution", "risk", "bracket orders", "stop-loss", "target", "broker", "order", "scanner", "market", "entries", "exits", "trade setup", "playbook enforcement"}
 URL_CTA_HINTS = {"product", "feature", "website", "signup", "learn more", "try", "explore", "demo", "platform"}
 
@@ -92,10 +95,29 @@ def should_include_url(pillar: str, archetype: str, seed: int | None = None) -> 
     return rng.random() < 0.42
 
 
+def build_hashtags(pillar: str, archetype: str) -> list[str]:
+    mapping = {
+        "paper": ["#PaperTrading", "#TradingPlaybook", "#TradingRules"],
+        "automation": ["#TradingAutomation", "#ExecutionDiscipline", "#RuleBasedExecution"],
+        "scanner": ["#MarketScanner", "#TradeManagement", "#TradingRules"],
+        "risk": ["#RiskControls", "#TradingDiscipline", "#BracketOrders"],
+        "bracket": ["#BracketOrders", "#TradeManagement", "#RiskControls"],
+        "playbook": ["#TradingPlaybook", "#ProcessOverImpulse", "#RuleBasedExecution"],
+    }
+    blob = f"{pillar} {archetype}".lower()
+    selected = []
+    for key, tags in mapping.items():
+        if key in blob:
+            selected = tags
+            break
+    if not selected:
+        selected = ["#TradingDiscipline", "#RuleBasedExecution", "#RiskControls"]
+    return ["#XeanVI", *selected[:3]]
+
+
 def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosure: bool) -> str:
     pillar_txt = (pillar or "process discipline").strip().lower()
     archetype_txt = (archetype or "lesson learned").strip().lower()
-
     hook = {
         "confession": "I used to think more screen time meant better outcomes, but it usually meant more noise.",
         "hard truth": "Hard truth: discipline is built before the trade, not after the chart moves.",
@@ -110,25 +132,19 @@ def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosu
         "before/after mindset": "Before: chasing every move. After: following a defined process and accepting patience.",
         "lesson learned": "Lesson learned: repeatable process matters more than dramatic single-session decisions.",
     }.get(archetype_txt, "Discipline starts with clear rules and measured decisions.")
+    emoji = random.choice(APPROVED_EMOJIS) if random.random() < 0.5 else ""
+    hook_line = f"{hook} {emoji}".strip()
 
-    insight = f"For {pillar_txt}, define conditions in advance, review risk before action, and log what qualified or failed the setup so future decisions stay grounded."
-    tie_in = "XeanVI helps enforce user-defined rules, keeps validation visible, and supports rule-based execution without replacing judgment."
+    insight_1 = f"For {pillar_txt}, define conditions before pressure shows up and review risk before action."
+    insight_2 = "Document what qualified or failed the setup so future execution stays grounded and repeatable."
+    tie_in = "XeanVI helps enforce user-defined rules and keeps validation visible across each execution step."
     cta = f"Explore XeanVI: {BRAND_URL}" if include_url else "Build the process before the pressure hits."
 
-    caption = f"{hook} {insight} {tie_in} {cta}"
+    lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
     if needs_disclosure:
-        caption = f"{caption} {DISCLOSURE}"
-
-    words = caption.split()
-    if len(words) > 90:
-        reserved = len(DISCLOSURE.split()) if needs_disclosure else 0
-        reserved += 3 if include_url else len("Build the process before the pressure hits.".split())
-        core_limit = max(1, 90 - reserved)
-        core = " ".join((f"{hook} {insight} {tie_in}").split()[:core_limit])
-        caption = f"{core} {cta}"
-        if needs_disclosure:
-            caption = f"{caption} {DISCLOSURE}"
-    return re.sub(r"\s+", " ", caption).strip()
+        lines.extend(["", DISCLOSURE])
+    lines.extend(["", " ".join(build_hashtags(pillar, archetype))])
+    return "\n".join(lines).strip()
 
 
 def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: bool) -> str:

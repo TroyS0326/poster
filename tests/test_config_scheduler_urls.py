@@ -243,3 +243,20 @@ def test_scheduler_replaces_malformed_gemini_caption_with_deterministic(monkeypa
     assert "visit" not in lowered
     assert "learn more at" not in lowered
     assert "disclosure:" not in lowered
+
+
+def test_scheduler_final_candidate_caption_has_linebreaks_and_four_hashtags(monkeypatch):
+    cfg = SimpleNamespace(max_generation_attempts=1, manual_review_mode=True, dry_run=True, prefer_local_public_image_url=False)
+    logger = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None, error=lambda *a, **k: None, exception=lambda *a, **k: None)
+    candidate = {"caption": "raw", "image_prompt": "safe prompt no readable text", "negative_prompt": "", "pillar": "Risk controls", "archetype": "checklist"}
+    monkeypatch.setattr(scheduler, "generate_content_package", lambda *_: candidate.copy())
+    seen = {}
+    monkeypatch.setattr(scheduler, "validate_caption", lambda c: (seen.setdefault("caption", c) or True, "ok"))
+    monkeypatch.setattr(scheduler, "validate_image_prompt", lambda *_: (True, "ok"))
+    monkeypatch.setattr(scheduler, "generate_image", lambda *_: {"local_path": "images/generated/a.jpg", "remote_url": "https://replicate.delivery/x.jpg"})
+    monkeypatch.setattr(scheduler, "upload_image", lambda *_: "https://local.host/images/generated/a.jpg")
+    monkeypatch.setattr(scheduler, "post_to_meta", lambda *_: {"facebook": {"status": "skipped"}, "instagram": {"status": "skipped"}})
+    scheduler.run_workflow(cfg, logger)
+    cap = seen["caption"]
+    assert "\n\n" in cap
+    assert len([w for w in cap.split() if w.startswith("#")]) == 4

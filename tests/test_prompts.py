@@ -1,4 +1,4 @@
-from prompts import BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, build_caption, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
+from prompts import BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, APPROVED_EMOJIS, build_caption, build_hashtags, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
 
 
 def test_disclosure_needed_for_risk_terms():
@@ -22,10 +22,15 @@ def test_sanitize_adds_once_disclosure_and_url():
     assert out.count(BRAND_URL) == 1
 
 
-def test_text_templates_are_explicitly_limited():
-    text_enabled = [t for t in IMAGE_PROMPT_TEMPLATES if t["allows_text"]]
-    assert len(text_enabled) == 2
-    assert all("text" in t["prompt"].lower() for t in text_enabled)
+def test_image_prompt_templates_all_disallow_text():
+    assert all(not t["allows_text"] for t in IMAGE_PROMPT_TEMPLATES)
+
+
+def test_image_prompt_templates_remove_text_directives():
+    blob = "\n".join(t["prompt"] for t in IMAGE_PROMPT_TEMPLATES)
+    assert "Add bold professional text" not in blob
+    assert "Add headline text" not in blob
+    assert "Add small footer text" not in blob
 
 
 def test_short_caption_expands_to_minimum_words():
@@ -148,9 +153,10 @@ def test_sanitize_allows_clean_disclosure_and_url_ending():
     assert "learn more at." not in out.lower()
 
 
-def test_build_caption_word_count_range():
+def test_build_caption_returns_line_breaks_and_4_hashtags():
     cap = build_caption("Risk controls before entries", "checklist", include_url=False, needs_disclosure=True)
-    assert 45 <= len(cap.split()) <= 90
+    assert "\n\n" in cap
+    assert len([w for w in cap.split() if w.startswith("#")]) == 4
 
 
 def test_build_caption_disclosure_exactly_once_when_required():
@@ -174,3 +180,20 @@ def test_build_caption_never_has_forbidden_cta_fragments():
     assert "visit" not in lowered
     assert "learn more at" not in lowered
     assert "disclosure:" not in lowered
+
+
+def test_build_caption_always_has_xeanvi_hashtag():
+    cap = build_caption("Risk controls", "checklist", include_url=False, needs_disclosure=False)
+    assert "#XeanVI" in cap
+
+
+def test_build_caption_uses_at_most_one_approved_emoji_and_never_rainbow():
+    cap = build_caption("Risk controls", "checklist", include_url=False, needs_disclosure=False)
+    assert "🌈" not in cap
+    count = sum(cap.count(e) for e in APPROVED_EMOJIS)
+    assert count <= 1
+
+
+def test_build_hashtags_exactly_four():
+    tags = build_hashtags("paper trading", "checklist")
+    assert len(tags) == 4 and tags[0] == "#XeanVI"

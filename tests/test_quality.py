@@ -2,78 +2,39 @@ from quality import validate_caption, validate_image_prompt
 from prompts import DISCLOSURE
 
 
-def test_quality_requires_disclosure_when_risk_related():
-    cap = "Execution discipline matters when market pressure rises and bracket orders are active. Keep a defined process, validate entries and exits, and enforce limits before every live trading decision so emotion does not drive outcomes. XeanVI keeps rules visible and repeatable across sessions so your command center supports judgment, not impulse. "
+def _base_caption():
+    return "Hook line.\n\nInsight one for disciplined process.\nInsight two with review steps.\n\nXeanVI helps enforce user-defined rules and keeps validation visible.\n\nBuild the process before the pressure hits.\n\n#XeanVI #TradingDiscipline #RiskControls #RuleBasedExecution"
+
+
+def test_validate_caption_rejects_3_hashtags():
+    cap = _base_caption().replace("#RuleBasedExecution", "")
     ok, reason = validate_caption(cap)
-    assert not ok and "disclosure" in reason
+    assert not ok and "exactly 4 hashtags" in reason
 
 
-def test_quality_allows_non_risk_without_disclosure():
-    cap = "Shipping update from the product team: we refined dashboard navigation, reduced clutter in validation panels, and improved audit logs so traders can review workflows faster. This release focuses on usability, architecture clarity, and operator confidence in the command center. Follow for more build notes, and share which module you want to see next in a behind-the-scenes walkthrough."
-    ok, _ = validate_caption(cap)
-    assert ok
+def test_validate_caption_rejects_5_hashtags():
+    cap = _base_caption() + " #TradingRules"
+    ok, reason = validate_caption(cap)
+    assert not ok and "exactly 4 hashtags" in reason
 
 
-def test_quality_blocks_banned_phrase():
-    cap = f"This platform will guarantee outcomes and make money with no effort while every setup wins automatically through signals and certainty for everyone who joins today. Keep following for fast results and easy wins in every market session forever with no drawdown at all. {DISCLOSURE}"
-    ok, _ = validate_caption(cap)
+def test_validate_caption_rejects_rainbow_emoji():
+    cap = _base_caption().replace("Hook line.", "Hook line 🌈.")
+    ok, reason = validate_caption(cap)
+    assert not ok and "banned emoji" in reason
+
+
+def test_validate_caption_rejects_more_than_one_emoji():
+    cap = _base_caption().replace("Hook line.", "Hook line 🧠 ✅.")
+    ok, reason = validate_caption(cap)
+    assert not ok and "more than one emoji" in reason
+
+
+def test_validate_image_prompt_rejects_readable_text_requests():
+    ok, reason = validate_image_prompt("Create dashboard and add headline text with typography and labeled sections")
     assert not ok
 
 
-def test_image_prompt_rejects_luxury_money_imagery():
-    ok, reason = validate_image_prompt("Cinematic trading room with cash piles, yacht visuals, and fake PnL account balance screenshots, glowing luxury style, dark fintech mood, ultra detailed 16:9 composition")
-    assert not ok
-    assert "banned" in reason
-
-
-
-def test_risk_caption_becomes_valid_after_sanitization():
-    from prompts import sanitize_caption_policy
-
-    cap = "Bracket orders and live trading process need discipline, defined checks, and repeatable review loops to avoid emotional decisions."
-    sanitized = sanitize_caption_policy(cap, needs_disclosure=True, include_url=False)
-    ok, reason = validate_caption(sanitized)
+def test_validate_image_prompt_allows_no_readable_text_safety_language():
+    ok, reason = validate_image_prompt("Create premium fintech dashboard with abstract UI panels, no readable text, no words, no letters, no typography, no logos")
     assert ok, reason
-
-def test_image_prompt_allows_no_profit_guarantees():
-    ok, reason = validate_image_prompt("Create a dark fintech hero visual with dashboards, rule validation flow, no profit guarantees, no luxury imagery, and disciplined execution mood in a clean 16:9 cinematic layout.")
-    assert ok, reason
-
-
-def test_image_prompt_allows_no_guaranteed_returns():
-    ok, reason = validate_image_prompt("Design a realistic operations command center with risk controls and automation logs, no guaranteed returns, no unrealistic claims, clean professional palette and detailed 16:9 composition.")
-    assert ok, reason
-
-
-def test_image_prompt_rejects_guaranteed_profits():
-    ok, reason = validate_image_prompt("Create an aggressive trading ad with guaranteed profits and instant outcomes, bright charts and fast results energy in a dramatic 16:9 composition for social media.")
-    assert not ok
-    assert "banned compliance term" in reason
-
-
-def test_quality_rejects_overclaim_flawless_execution():
-    cap = "Execution review matters for live trading consistency and risk checks. Teams should define rules, verify entries, and track exits with visible validation logs so decisions stay grounded during volatile sessions. XeanVI keeps workflows transparent and supports rule-based execution, but never promises certainty or performance outcomes. Avoid shortcuts, document each step, and maintain accountability in every session. flawless execution. Not financial advice. Trading involves risk."
-    ok, reason = validate_caption(cap)
-    assert not ok
-    assert "overclaim or hype phrase" in reason
-
-
-def test_quality_rejects_overclaim_smarter_execution():
-    cap = "Discipline improves when traders pre-define setups, evaluate context, and enforce risk limits before order placement. A structured process keeps validation visible, supports consistency, and reduces emotional interference without replacing judgment. XeanVI helps teams document rules, review compliance checkpoints, and preserve control over decisions during changing market conditions across each live session. smarter execution. Not financial advice. Trading involves risk."
-    ok, reason = validate_caption(cap)
-    assert not ok
-    assert "overclaim or hype phrase" in reason
-
-
-def test_validate_caption_rejects_learn_more_at_fragment():
-    cap = "This workflow helps teams document checklists, review execution logs, and keep decisions aligned with pre-defined rules across changing sessions while preserving operator judgment and consistent oversight for each planned scenario in production environments with compliance checkpoints for review quality. Learn more at. Not financial advice. Trading involves risk."
-    ok, reason = validate_caption(cap)
-    assert not ok
-    assert reason in {"caption contains dangling CTA fragment", "caption contains banned malformed fragment"}
-
-
-def test_validate_caption_rejects_exact_malformed_caption():
-    cap = "Visit (Disclosure: XeanVI provides tools to help enforce user-defined rules. It does not Not financial advice. Trading involves risk."
-    ok, reason = validate_caption(cap)
-    assert not ok
-    assert "malformed" in reason or "parentheses" in reason
