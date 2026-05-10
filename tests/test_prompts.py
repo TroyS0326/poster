@@ -1,4 +1,4 @@
-from prompts import DISCLOSURE, BRAND_URL, IMAGE_PROMPT_TEMPLATES, needs_risk_disclosure, sanitize_caption_policy, should_include_url
+from prompts import BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
 
 
 def test_disclosure_needed_for_risk_terms():
@@ -44,3 +44,14 @@ def test_url_can_be_appended_and_deduplicated():
     cap = f"Explore the platform {BRAND_URL}"
     out = sanitize_caption_policy(cap, needs_disclosure=False, include_url=True)
     assert out.count(BRAND_URL) == 1
+
+
+def test_repair_caption_risk_free():
+    repaired = repair_caption_compliance("This is a risk-free framework for traders.")
+    assert "risk-free" not in repaired.lower()
+    assert "structured risk controls" in repaired.lower()
+
+
+def test_repair_caption_profit():
+    repaired = repair_caption_compliance("This process improves profit consistency.")
+    assert "profit" not in repaired.lower()

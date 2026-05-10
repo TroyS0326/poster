@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import main
 import post_once
+import text_ai
 
 
 def test_post_once_calls_run_workflow_once(monkeypatch):
@@ -34,3 +35,27 @@ def test_main_uses_schedule_posts_entrypoint(monkeypatch):
 
     assert calls["schedule"] == 1
     assert calls["run"] == 0
+
+
+def test_template_p8_uses_approved_image_prompt(monkeypatch):
+    cfg = SimpleNamespace(gemini_model="gemini-1.5-flash", gemini_api_key="k")
+    logger = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None)
+
+    monkeypatch.setattr(text_ai.random, "choice", lambda seq: "template:p8" if seq == text_ai.VISUAL_DIRECTIONS else seq[0])
+    monkeypatch.setattr(text_ai.random, "randint", lambda *_: 1111)
+    monkeypatch.setattr(text_ai.time, "time", lambda: 1234567890)
+
+    payload = {
+        "candidates": [{
+            "content": {"parts": [{"text": "{\"pillar\":\"p\",\"archetype\":\"a\",\"caption\":\"A compliant caption with enough words to exceed minimum threshold requirements for validation and clean structure in final output formatting.\",\"image_concept\":\"concept\",\"image_prompt\":\"unsafe rewritten prompt\",\"negative_prompt\":\"none\"}"}]}
+        }]
+    }
+
+    class Resp:
+        def raise_for_status(self): return None
+        def json(self): return payload
+
+    monkeypatch.setattr(text_ai.requests, "post", lambda *a, **k: Resp())
+    package = text_ai.generate_content_package(cfg, logger)
+    p8 = next(t["prompt"] for t in text_ai.IMAGE_PROMPT_TEMPLATES if t["id"] == "p8")
+    assert package["image_prompt"] == p8

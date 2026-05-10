@@ -3,7 +3,7 @@ import random
 import time
 
 import requests
-from prompts import CONTENT_PILLARS, POST_ARCHETYPES, SYSTEM_PROMPT, VISUAL_DIRECTIONS
+from prompts import CONTENT_PILLARS, IMAGE_PROMPT_TEMPLATES, POST_ARCHETYPES, SYSTEM_PROMPT, VISUAL_DIRECTIONS
 
 REQUIRED_PACKAGE_FIELDS = ["pillar", "archetype", "caption", "image_concept", "image_prompt", "negative_prompt"]
 
@@ -144,5 +144,11 @@ def generate_content_package(config, logger):
     if not _is_valid_package(parsed):
         logger.warning("gemini parsed package missing required fields; using fallback")
         return _fallback_package(pillar, archetype)
+
+    if visual_direction.startswith("template:"):
+        template_id = visual_direction.split(":", 1)[1].strip().lower()
+        template = next((t for t in IMAGE_PROMPT_TEMPLATES if t["id"].lower() == template_id), None)
+        if template:
+            parsed["image_prompt"] = template["prompt"]
 
     return parsed

@@ -34,3 +34,18 @@ def test_risk_caption_becomes_valid_after_sanitization():
     sanitized = sanitize_caption_policy(cap, needs_disclosure=True, include_url=False)
     ok, reason = validate_caption(sanitized)
     assert ok, reason
+
+def test_image_prompt_allows_no_profit_guarantees():
+    ok, reason = validate_image_prompt("Create a dark fintech hero visual with dashboards, rule validation flow, no profit guarantees, no luxury imagery, and disciplined execution mood in a clean 16:9 cinematic layout.")
+    assert ok, reason
+
+
+def test_image_prompt_allows_no_guaranteed_returns():
+    ok, reason = validate_image_prompt("Design a realistic operations command center with risk controls and automation logs, no guaranteed returns, no unrealistic claims, clean professional palette and detailed 16:9 composition.")
+    assert ok, reason
+
+
+def test_image_prompt_rejects_guaranteed_profits():
+    ok, reason = validate_image_prompt("Create an aggressive trading ad with guaranteed profits and instant outcomes, bright charts and fast results energy in a dramatic 16:9 composition for social media.")
+    assert not ok
+    assert "banned compliance term" in reason
