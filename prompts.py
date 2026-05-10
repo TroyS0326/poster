@@ -72,6 +72,9 @@ Instructions:
 - Do not call XeanVI a signal service.
 - Do not recommend trades.
 - Automation enforces user-defined rules; it does not replace judgment.
+- Do not use “flawless execution,” “perfect setup,” “best strategy,” “smarter execution,” “empower your trading,” or “elevate your trading.”
+- Say XeanVI supports rule-following and validation. Do not say it eliminates emotion or guarantees execution quality.
+- Prefer grounded phrases: “supports rule-based execution,” “helps enforce user-defined rules,” “keeps validation visible,” “reduces emotional interference.”
 - Allow readable headline text only when using a template that explicitly includes text.
 - Never include URLs inside image_prompt.
 """
@@ -140,11 +143,21 @@ def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: b
 def repair_caption_compliance(caption: str) -> str:
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     replacements = [
+        (r"\bensures flawless execution\b", "supports more consistent rule-following"),
+        (r"\bflawless execution\b", "more consistent rule-following"),
         (r"\bexecute with unwavering precision\b", "support more consistent rule-following"),
+        (r"\bfreeing you from emotional pitfalls\b", "reducing emotional interference"),
+        (r"\bfreeing you from emotion\b", "reducing emotional interference"),
         (r"\bremoving emotional barriers\b", "reducing emotional interference"),
+        (r"\bempowers you to transform\b", "helps you turn"),
+        (r"\btransform your disciplined approach\b", "turn your defined process"),
         (r"\btransform hesitation into decisive action\b", "Turn hesitation into a more structured review process"),
+        (r"\belevate your trading discipline\b", "Build a more disciplined trading process"),
+        (r"\bexplore smarter execution\b", "review a more structured execution workflow"),
+        (r"\bsmarter execution\b", "structured execution"),
         (r"\bempower your trading\b", "Build a more disciplined trading process"),
         (r"\bperfect trade setup\b", "qualified setup"),
+        (r"\bbest strategies\b", "well-defined strategies"),
         (r"\bmissed opportunities\b", "missed setups"),
         (r"\brisk[- ]free\b", "structured risk controls"),
         (r"\bmake money\b", "improve process discipline"),

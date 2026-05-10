@@ -11,6 +11,20 @@ BANNED_REGEX_PATTERNS = [
 ALLOWED_URL_PATTERN = re.compile(r"https?://[^\s]+", re.IGNORECASE)
 BROKER_REGEX = re.compile(r"\b(alpaca|robinhood|fidelity|webull|etrade|e\*trade|schwab|binance|coinbase|kraken)\b", re.IGNORECASE)
 
+OVERCLAIM_PHRASES = [
+    "flawless execution",
+    "guaranteed execution",
+    "removes emotion",
+    "removes emotional barriers",
+    "free from emotional pitfalls",
+    "emotion-proof",
+    "smarter execution",
+    "elevate your trading",
+    "empower your trading",
+    "perfect trade setup",
+    "best strategies",
+]
+
 
 def _find_banned_match(text: str) -> str | None:
     lower = text.lower()
@@ -36,6 +50,10 @@ def validate_caption(caption: str) -> tuple[bool, str]:
         return False, "caption contains broker name"
     if any(p in caption.lower() for p in GENERIC_PHRASES):
         return False, "caption too generic marketing language"
+    lowered = caption.lower()
+    for phrase in OVERCLAIM_PHRASES:
+        if phrase in lowered:
+            return False, f"caption contains overclaim or hype phrase: {phrase}"
 
     needs = needs_risk_disclosure(caption)
     has = DISCLOSURE.lower() in caption.lower()

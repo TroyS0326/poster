@@ -91,3 +91,21 @@ def test_repair_softens_perfect_trade_setup():
     repaired = repair_caption_compliance("Watching a perfect trade setup can trigger hesitation.")
     assert "perfect trade setup" not in repaired.lower()
     assert "qualified setup" in repaired.lower()
+
+
+def test_repair_replaces_flawless_execution():
+    repaired = repair_caption_compliance("This workflow ensures flawless execution in volatile sessions.")
+    assert "flawless execution" not in repaired.lower()
+    assert "supports more consistent rule-following" in repaired
+
+
+def test_repair_replaces_freeing_you_from_emotional_pitfalls():
+    repaired = repair_caption_compliance("The system focuses on freeing you from emotional pitfalls during entries.")
+    assert "freeing you from emotional pitfalls" not in repaired.lower()
+    assert "reducing emotional interference" in repaired
+
+
+def test_repair_replaces_elevate_your_trading_discipline():
+    repaired = repair_caption_compliance("Elevate your trading discipline with routine reviews.")
+    assert "elevate your trading discipline" not in repaired.lower()
+    assert "Build a more disciplined trading process" in repaired
