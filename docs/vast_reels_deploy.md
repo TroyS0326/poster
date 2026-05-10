@@ -196,3 +196,18 @@ Common issues and checks:
 - **disk full**: prune older `outputs/` artifacts and/or export backups off-instance.
 - **no output when using `--next`**: all runs may already be complete; use `--list-runs` to confirm remaining work.
 - **generated videos too large**: reduce batch volume, clean old files more aggressively, and back up/remove older MP4s.
+
+## O. VAST ComfyUI LTX-2.3 provider notes
+
+- The Vast Comfy template exposes the actual backend at `127.0.0.1:18188`.
+- Do **not** point the repo's Comfy provider to `8188` on this template.
+
+Working LTX environment example:
+
+```dotenv
+COMFYUI_API_URL=http://127.0.0.1:18188
+COMFYUI_WORKFLOW_PATH=workflows/ltx_t2v_api_working.json
+COMFYUI_PROMPT_NODE_ID=267:266
+COMFYUI_NEGATIVE_PROMPT_NODE_ID=267:247
+COMFYUI_SEED_NODE_ID=267:237
+```
