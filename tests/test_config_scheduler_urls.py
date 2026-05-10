@@ -140,3 +140,41 @@ def test_scheduler_repairs_caption_before_validate(monkeypatch):
     lowered = seen["caption"].lower()
     assert "risk-free" not in lowered
     assert "profit" not in lowered
+
+
+def test_scheduler_final_caption_has_no_dangling_visit(monkeypatch):
+    cfg = SimpleNamespace(max_generation_attempts=1, manual_review_mode=True, dry_run=True, prefer_local_public_image_url=False)
+    logger = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None, error=lambda *a, **k: None, exception=lambda *a, **k: None)
+    candidate = {"caption": "Workflow summary. Visit: .", "image_prompt": "p", "negative_prompt": "", "pillar": "Risk controls", "archetype": "checklist"}
+    monkeypatch.setattr(scheduler, "generate_content_package", lambda *_: candidate.copy())
+    seen = {"caption": None}
+    monkeypatch.setattr(scheduler, "validate_caption", lambda c: (seen.__setitem__("caption", c) or True, "ok"))
+    monkeypatch.setattr(scheduler, "validate_image_prompt", lambda *_: (True, "ok"))
+    monkeypatch.setattr(scheduler, "generate_image", lambda *_: {"local_path": "images/generated/a.jpg", "remote_url": "https://replicate.delivery/x.jpg"})
+    monkeypatch.setattr(scheduler, "upload_image", lambda *_: "https://local.host/images/generated/a.jpg")
+    monkeypatch.setattr(scheduler, "post_to_meta", lambda *_: {"facebook": {"status": "skipped"}, "instagram": {"status": "skipped"}})
+    scheduler.run_workflow(cfg, logger)
+    assert "Visit:" not in seen["caption"]
+
+
+def test_scheduler_final_caption_has_no_duplicate_disclosure_fragments(monkeypatch):
+    cfg = SimpleNamespace(max_generation_attempts=1, manual_review_mode=True, dry_run=True, prefer_local_public_image_url=False)
+    logger = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None, error=lambda *a, **k: None, exception=lambda *a, **k: None)
+    candidate = {
+        "caption": "Live trading notes. Not financial advice. Trading involves risk. Trading involves risk.",
+        "image_prompt": "p",
+        "negative_prompt": "",
+        "pillar": "Risk controls",
+        "archetype": "checklist",
+    }
+    monkeypatch.setattr(scheduler, "generate_content_package", lambda *_: candidate.copy())
+    seen = {"caption": None}
+    monkeypatch.setattr(scheduler, "validate_caption", lambda c: (seen.__setitem__("caption", c) or True, "ok"))
+    monkeypatch.setattr(scheduler, "validate_image_prompt", lambda *_: (True, "ok"))
+    monkeypatch.setattr(scheduler, "generate_image", lambda *_: {"local_path": "images/generated/a.jpg", "remote_url": "https://replicate.delivery/x.jpg"})
+    monkeypatch.setattr(scheduler, "upload_image", lambda *_: "https://local.host/images/generated/a.jpg")
+    monkeypatch.setattr(scheduler, "post_to_meta", lambda *_: {"facebook": {"status": "skipped"}, "instagram": {"status": "skipped"}})
+    scheduler.run_workflow(cfg, logger)
+    lowered = seen["caption"].lower()
+    assert lowered.count("trading involves risk") == 1
+    assert lowered.count("not financial advice") == 1
