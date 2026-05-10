@@ -12,8 +12,8 @@ def _mask_token(token: str) -> str:
     return f"set:{token[:4]}...{token[-4:]}"
 
 
-def _graph_get(path: str, token: str) -> tuple[bool, dict]:
-    url = f"https://graph.facebook.com/{GRAPH_VERSION}/{path.lstrip('/')}"
+def _graph_get(path: str, token: str, graph_version: str) -> tuple[bool, dict]:
+    url = f"https://graph.facebook.com/{graph_version}/{path.lstrip('/')}"
     try:
         res = requests.get(url, params={"access_token": token}, timeout=20)
         data = res.json()
@@ -25,20 +25,21 @@ def _graph_get(path: str, token: str) -> tuple[bool, dict]:
 
 
 def run_preflight(env: dict | None = None) -> dict:
-    env = env or os.environ
+    env = os.environ if env is None else env
+    graph_version = env.get("META_GRAPH_VERSION", os.getenv("META_GRAPH_VERSION", "v20.0"))
     token = env.get("META_ACCESS_TOKEN", "")
     fb = env.get("FB_PAGE_ID", "")
     ig = env.get("IG_BUSINESS_ID", "")
     out = {
         "token": _mask_token(token),
-        "graph_version": GRAPH_VERSION,
+        "graph_version": graph_version,
         "fb_page_id": "invalid",
         "ig_business_id": "invalid",
     }
     if not token or not fb or not ig:
         return out
-    fb_ok, fb_data = _graph_get(f"{fb}?fields=id,name", token)
-    ig_ok, ig_data = _graph_get(f"{ig}?fields=id,username", token)
+    fb_ok, fb_data = _graph_get(f"{fb}?fields=id,name", token, graph_version)
+    ig_ok, ig_data = _graph_get(f"{ig}?fields=id,username", token, graph_version)
     out["fb_page_id"] = "valid" if fb_ok and fb_data.get("id") else "invalid"
     out["ig_business_id"] = "valid" if ig_ok and ig_data.get("id") else "invalid"
     return out
