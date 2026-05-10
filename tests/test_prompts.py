@@ -55,3 +55,39 @@ def test_repair_caption_risk_free():
 def test_repair_caption_profit():
     repaired = repair_caption_compliance("This process improves profit consistency.")
     assert "profit" not in repaired.lower()
+
+
+def test_sanitize_removes_dangling_visit_after_url_strip():
+    out = sanitize_caption_policy("Learn the workflow. Visit: . https://xeanvi.com", needs_disclosure=False, include_url=False)
+    assert "Visit:" not in out
+
+
+def test_sanitize_removes_partial_disclosure_fragments_before_append():
+    caption = "Process discipline matters. Trading involves risk. Not financial advice."
+    out = sanitize_caption_policy(caption, needs_disclosure=True, include_url=False)
+    assert out.count("Trading involves risk.") == 1
+    assert out.count("Not financial advice.") == 1
+
+
+def test_sanitize_keeps_exactly_one_disclosure_when_required():
+    caption = "Review the workflow. Not financial advice. Trading involves risk. Trading involves risk."
+    out = sanitize_caption_policy(caption, needs_disclosure=True, include_url=False)
+    assert out.count(DISCLOSURE) == 1
+
+
+def test_repair_softens_unwavering_precision():
+    repaired = repair_caption_compliance("Define your rules and execute with unwavering precision.")
+    assert "execute with unwavering precision" not in repaired.lower()
+    assert "support more consistent rule-following" in repaired
+
+
+def test_repair_softens_empower_your_trading():
+    repaired = repair_caption_compliance("Empower your trading with better tools.")
+    assert "empower your trading" not in repaired.lower()
+    assert "Build a more disciplined trading process" in repaired
+
+
+def test_repair_softens_perfect_trade_setup():
+    repaired = repair_caption_compliance("Watching a perfect trade setup can trigger hesitation.")
+    assert "perfect trade setup" not in repaired.lower()
+    assert "qualified setup" in repaired.lower()

@@ -1,4 +1,5 @@
 import random
+import re
 import time
 from quality import validate_caption, validate_image_prompt
 from prompts import needs_risk_disclosure, repair_caption_compliance, should_include_url, sanitize_caption_policy
@@ -33,10 +34,16 @@ def run_workflow(config, logger):
             logger.info("caption generated")
             pillar = candidate.get("pillar", "")
             archetype = candidate.get("archetype", "")
-            needs_disclosure = needs_risk_disclosure(f"{pillar} {archetype} {caption}")
-            include_url = should_include_url(pillar, archetype)
             repaired_caption = repair_caption_compliance(caption)
+            needs_disclosure = needs_risk_disclosure(f"{pillar} {archetype} {repaired_caption}")
+            include_url = should_include_url(pillar, archetype)
             sanitized_caption = sanitize_caption_policy(repaired_caption, needs_disclosure, include_url)
+            sanitized_caption = re.sub(r"\bVisit:\s*\.?", "", sanitized_caption, flags=re.IGNORECASE).strip()
+            sanitized_caption = re.sub(r"\bLearn more:\s*\.?", "", sanitized_caption, flags=re.IGNORECASE).strip()
+            if sanitized_caption.lower().count("trading involves risk") > 1 or sanitized_caption.lower().count("not financial advice") > 1:
+                sanitized_caption = sanitize_caption_policy(sanitized_caption, needs_disclosure, include_url)
+            if sanitized_caption.lower().count("xeanvi.com") > 1:
+                sanitized_caption = sanitize_caption_policy(sanitized_caption, needs_disclosure, include_url)
             candidate["caption"] = sanitized_caption
             caption = sanitized_caption
             cap_ok, cap_reason = validate_caption(caption)

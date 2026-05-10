@@ -92,7 +92,15 @@ def should_include_url(pillar: str, archetype: str, seed: int | None = None) -> 
 def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: bool) -> str:
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     text = re.sub(re.escape(DISCLOSURE), "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"\.?\s*Trading involves risk\.", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"Not financial advice\.", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"\bVisit:\s*\.?", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"\bLearn more:\s*\.?", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"\bSee more:\s*\.?", "", text, flags=re.IGNORECASE).strip()
     text = re.sub(re.escape(BRAND_URL), "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"(?:\s*[.!?,:;]){2,}", ".", text)
+    text = re.sub(r"\s+([.!?,:;])", r"\1", text)
+    text = re.sub(r"([.!?,:;])\1+", r"\1", text)
     text = re.sub(r"\s+", " ", text).strip()
 
     min_words = 45
@@ -132,6 +140,12 @@ def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: b
 def repair_caption_compliance(caption: str) -> str:
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     replacements = [
+        (r"\bexecute with unwavering precision\b", "support more consistent rule-following"),
+        (r"\bremoving emotional barriers\b", "reducing emotional interference"),
+        (r"\btransform hesitation into decisive action\b", "Turn hesitation into a more structured review process"),
+        (r"\bempower your trading\b", "Build a more disciplined trading process"),
+        (r"\bperfect trade setup\b", "qualified setup"),
+        (r"\bmissed opportunities\b", "missed setups"),
         (r"\brisk[- ]free\b", "structured risk controls"),
         (r"\bmake money\b", "improve process discipline"),
         (r"\bwin rate\b", "consistency metrics"),
