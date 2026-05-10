@@ -24,6 +24,8 @@ def _base_config(**overrides):
         randomize_interval_minutes=0,
         log_path="logs/x.log",
         dry_run=False,
+        post_to_facebook=True,
+        post_to_instagram=True,
         manual_review_mode=False,
         max_generation_attempts=1,
         image_width=1080,

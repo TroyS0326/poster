@@ -23,6 +23,8 @@ class Config:
     randomize_interval_minutes: int
     log_path: str
     dry_run: bool
+    post_to_facebook: bool
+    post_to_instagram: bool
     manual_review_mode: bool
     max_generation_attempts: int
     image_width: int
@@ -57,6 +59,8 @@ def load_config() -> Config:
         randomize_interval_minutes=int(os.getenv("RANDOMIZE_INTERVAL_MINUTES", "0")),
         log_path=os.getenv("LOG_PATH", "logs/xeanvi_social_bot.log"),
         dry_run=_to_bool(os.getenv("DRY_RUN"), False),
+        post_to_facebook=_to_bool(os.getenv("POST_TO_FACEBOOK"), True),
+        post_to_instagram=_to_bool(os.getenv("POST_TO_INSTAGRAM"), True),
         manual_review_mode=_to_bool(os.getenv("MANUAL_REVIEW_MODE"), False),
         max_generation_attempts=int(os.getenv("MAX_GENERATION_ATTEMPTS", "3")),
         image_width=int(os.getenv("IMAGE_WIDTH", "1080")),
