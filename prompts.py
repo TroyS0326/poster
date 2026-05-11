@@ -169,10 +169,15 @@ def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosu
     tie_in = rng.choice(tie_ins)
     cta = rng.choice(cta_url if include_url else cta_no_url)
 
-    lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
-    if needs_disclosure:
+    body_lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
+    hashtag_line = " ".join(build_hashtags(pillar, archetype, seed=seed))
+    final_caption_without_disclosure = "\n".join([*body_lines, "", hashtag_line]).strip()
+    effective_needs_disclosure = needs_disclosure or needs_risk_disclosure(final_caption_without_disclosure)
+
+    lines = list(body_lines)
+    if effective_needs_disclosure:
         lines.extend(["", DISCLOSURE])
-    lines.extend(["", " ".join(build_hashtags(pillar, archetype, seed=seed))])
+    lines.extend(["", hashtag_line])
     return "\n".join(lines).strip()
 
 
