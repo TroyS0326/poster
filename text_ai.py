@@ -19,8 +19,7 @@ def _load_content_angle_history(config, logger):
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        if isinstance(data, list):
-            return data[-30:]
+        return _normalize_content_angle_history(data, logger)
     except FileNotFoundError:
         return []
     except Exception as exc:
@@ -32,12 +31,49 @@ def _save_content_angle_history(path, history, logger):
     try:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(history[-30:], f)
+            json.dump(_normalize_content_angle_history(history, logger), f)
     except Exception as exc:
         logger.warning("content angle history save failed: %s", exc)
 
 
+def _normalize_content_angle_history(data, logger=None):
+    if not isinstance(data, list):
+        if logger:
+            logger.warning("content angle history malformed: expected list")
+        return []
+    valid = []
+    invalid_count = 0
+    for item in data:
+        if not isinstance(item, dict):
+            invalid_count += 1
+            continue
+        pillar = item.get("pillar")
+        archetype = item.get("archetype")
+        visual_direction = item.get("visual_direction")
+        if not (isinstance(pillar, str) and pillar.strip()):
+            invalid_count += 1
+            continue
+        if not (isinstance(archetype, str) and archetype.strip()):
+            invalid_count += 1
+            continue
+        if not (isinstance(visual_direction, str) and visual_direction.strip()):
+            invalid_count += 1
+            continue
+        valid.append(
+            {
+                "pillar": pillar.strip(),
+                "archetype": archetype.strip(),
+                "visual_direction": visual_direction.strip(),
+                "created_at": item.get("created_at"),
+            }
+        )
+    if invalid_count and logger:
+        logger.warning("content angle history dropped %s invalid entrie(s)", invalid_count)
+    return valid[-30:]
+
+
 def _select_content_angle(history, seed=None):
+    history = _normalize_content_angle_history(history)
     rng = random if seed is None else random.Random(seed)
     recent3_pillars = {h.get("pillar") for h in history[-3:]}
     recent2_arch = {h.get("archetype") for h in history[-2:]}
@@ -186,33 +222,30 @@ def generate_content_package(config, logger):
         response.raise_for_status()
     except requests.RequestException as exc:
         logger.warning("gemini request failed: %s; using fallback", exc)
-        fallback = _fallback_package(pillar, archetype)
-        fallback["visual_direction"] = visual_direction
-        return fallback
+        return _apply_visual_direction(_fallback_package(pillar, archetype), visual_direction)
 
     try:
         response_json = response.json()
         text = response_json["candidates"][0]["content"]["parts"][0]["text"]
     except (ValueError, KeyError, IndexError, TypeError) as exc:
         logger.warning("gemini response parsing failed: %s; using fallback", exc)
-        fallback = _fallback_package(pillar, archetype)
-        fallback["visual_direction"] = visual_direction
-        return fallback
+        return _apply_visual_direction(_fallback_package(pillar, archetype), visual_direction)
 
     parsed = _extract_json(text)
     if not _is_valid_package(parsed):
         logger.warning("gemini parsed package missing required fields; using fallback")
-        fallback = _fallback_package(pillar, archetype)
-        fallback["visual_direction"] = visual_direction
-        return fallback
+        return _apply_visual_direction(_fallback_package(pillar, archetype), visual_direction)
 
+    parsed["pillar"] = pillar
+    parsed["archetype"] = archetype
+    return _apply_visual_direction(parsed, visual_direction)
+
+
+def _apply_visual_direction(package, visual_direction):
+    package["visual_direction"] = visual_direction
     if visual_direction.startswith("template:"):
         template_id = visual_direction.split(":", 1)[1].strip().lower()
         template = next((t for t in IMAGE_PROMPT_TEMPLATES if t["id"].lower() == template_id), None)
         if template:
-            parsed["image_prompt"] = template["prompt"]
-
-    parsed["pillar"] = pillar
-    parsed["archetype"] = archetype
-    parsed["visual_direction"] = visual_direction
-    return parsed
+            package["image_prompt"] = template["prompt"]
+    return package

@@ -55,6 +55,28 @@ def _caption_hash(caption):
     return hashlib.sha256((caption or "").encode("utf-8")).hexdigest()
 
 
+def _post_result_has_success(result):
+    if not isinstance(result, dict):
+        return False
+    facebook_ok = result.get("facebook", {}).get("status") == "success"
+    instagram_ok = result.get("instagram", {}).get("status") == "success"
+    return facebook_ok or instagram_ok
+
+
+def _record_content_angle_history(config, logger, package):
+    angle_history = _load_content_angle_history(config, logger)
+    angle_path = _content_history_path(config)
+    angle_history.append(
+        {
+            "pillar": package.get("pillar", ""),
+            "archetype": package.get("archetype", ""),
+            "visual_direction": package.get("visual_direction", ""),
+            "created_at": int(time.time()),
+        }
+    )
+    _save_content_angle_history(angle_path, angle_history, logger)
+
+
 def run_workflow(config, logger):
     logger.info("workflow started")
     package = None
@@ -108,20 +130,6 @@ def run_workflow(config, logger):
             return
 
     caption, image_prompt, negative_prompt = _package_fields(package)
-    caption_sig = _caption_hash(caption)
-    caption_history = (caption_history + [caption_sig])[-50:]
-    _save_caption_history(history_path, caption_history, logger)
-    angle_history = _load_content_angle_history(config, logger)
-    angle_path = _content_history_path(config)
-    angle_history.append(
-        {
-            "pillar": package.get("pillar", ""),
-            "archetype": package.get("archetype", ""),
-            "visual_direction": package.get("visual_direction", ""),
-            "created_at": int(time.time()),
-        }
-    )
-    _save_content_angle_history(angle_path, angle_history, logger)
     logger.info("image prompt generated")
     image_result = generate_image(config, image_prompt, negative_prompt, logger)
     if not image_result:
@@ -141,6 +149,10 @@ def run_workflow(config, logger):
     logger.info("hosted/public image URL created: %s", hosted_url)
 
     if config.manual_review_mode:
+        caption_sig = _caption_hash(caption)
+        caption_history = (caption_history + [caption_sig])[-50:]
+        _save_caption_history(history_path, caption_history, logger)
+        _record_content_angle_history(config, logger, package)
         logger.info("MANUAL_REVIEW_MODE enabled; package=%s image_url=%s", package, hosted_url)
         result = {
             "dry_run": config.dry_run,
@@ -149,6 +161,11 @@ def run_workflow(config, logger):
         }
     else:
         result = post_to_meta(caption, hosted_url, config, logger)
+        if config.dry_run or _post_result_has_success(result):
+            caption_sig = _caption_hash(caption)
+            caption_history = (caption_history + [caption_sig])[-50:]
+            _save_caption_history(history_path, caption_history, logger)
+            _record_content_angle_history(config, logger, package)
 
     logger.info("Facebook posted or failed: %s", result["facebook"]["status"])
     logger.info("Instagram container created/published or failed: %s", result["instagram"]["status"])
