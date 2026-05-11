@@ -1,3 +1,6 @@
+import hashlib
+import json
+import os
 import random
 import time
 from quality import validate_caption, validate_image_prompt
@@ -15,9 +18,42 @@ def _package_fields(package: dict) -> tuple[str | None, str | None, str]:
     return package.get("caption"), package.get("image_prompt"), package.get("negative_prompt", "")
 
 
+def _caption_history_path(config):
+    log_path = getattr(config, "log_path", "logs/xeanvi_social_bot.log")
+    return os.path.join(os.path.dirname(log_path) or ".", "caption_history.json")
+
+
+def _load_caption_history(config, logger):
+    path = _caption_history_path(config)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return path, [str(x) for x in data][-50:]
+    except FileNotFoundError:
+        return path, []
+    except Exception as exc:
+        logger.warning("caption history load failed: %s", exc)
+    return path, []
+
+
+def _save_caption_history(path, hashes, logger):
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(hashes[-50:], f)
+    except Exception as exc:
+        logger.warning("caption history save failed: %s", exc)
+
+
+def _caption_hash(caption):
+    return hashlib.sha256((caption or "").encode("utf-8")).hexdigest()
+
+
 def run_workflow(config, logger):
     logger.info("workflow started")
     package = None
+    history_path, caption_history = _load_caption_history(config, logger)
 
     for attempt in range(1, config.max_generation_attempts + 1):
         try:
@@ -35,8 +71,17 @@ def run_workflow(config, logger):
             archetype = candidate.get("archetype", "")
             needs_disclosure = needs_risk_disclosure(f"{pillar} {archetype} {caption}")
             include_url = should_include_url(pillar, archetype)
-            candidate["caption"] = build_caption(pillar, archetype, include_url, needs_disclosure)
-            caption = candidate["caption"]
+            seed_blob = f"{time.time_ns()}|{random.randint(0, 10**9)}|{pillar}|{archetype}|{attempt}"
+            for variation_attempt in range(1, 6):
+                seed = f"{seed_blob}|{variation_attempt}"
+                candidate["caption"] = build_caption(pillar, archetype, include_url, needs_disclosure, seed=seed)
+                caption = candidate["caption"]
+                caption_sig = _caption_hash(caption)
+                if caption_sig not in caption_history:
+                    break
+                logger.info("duplicate caption hash detected; regenerating (attempt %s)", variation_attempt)
+            else:
+                logger.warning("all caption variants duplicated recent history; using latest generated variant")
             cap_ok, cap_reason = validate_caption(caption)
             prm_ok, prm_reason = validate_image_prompt(image_prompt)
             logger.info("caption quality %s (%s)", "passed" if cap_ok else "failed", cap_reason)
@@ -58,6 +103,9 @@ def run_workflow(config, logger):
             return
 
     caption, image_prompt, negative_prompt = _package_fields(package)
+    caption_sig = _caption_hash(caption)
+    caption_history = (caption_history + [caption_sig])[-50:]
+    _save_caption_history(history_path, caption_history, logger)
     logger.info("image prompt generated")
     image_result = generate_image(config, image_prompt, negative_prompt, logger)
     if not image_result:

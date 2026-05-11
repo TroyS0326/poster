@@ -197,3 +197,38 @@ def test_build_caption_uses_at_most_one_approved_emoji_and_never_rainbow():
 def test_build_hashtags_exactly_four():
     tags = build_hashtags("paper trading", "checklist")
     assert len(tags) == 4 and tags[0] == "#XeanVI"
+
+
+def test_build_caption_changes_with_different_seeds():
+    a = build_caption("Risk controls before entries", "checklist", include_url=False, needs_disclosure=True, seed=1)
+    b = build_caption("Risk controls before entries", "checklist", include_url=False, needs_disclosure=True, seed=2)
+    assert a != b
+
+
+def test_build_hashtags_rotates_with_seed():
+    tags_a = tuple(build_hashtags("Risk controls before entries", "checklist", seed=11))
+    tags_b = tuple(build_hashtags("Risk controls before entries", "checklist", seed=12))
+    assert len(tags_a) == 4
+    assert tags_a[0] == "#XeanVI"
+    assert len(set(tags_a)) == 4
+    assert tags_a != tags_b
+
+
+def test_seeded_caption_sample_has_multiple_unique_and_hashtag_sets():
+    captions = [
+        build_caption("Risk controls before entries", "checklist", include_url=(i % 2 == 0), needs_disclosure=True, seed=i)
+        for i in range(10)
+    ]
+    assert len(set(captions)) >= 4
+    hashtag_sets = set()
+    for cap in captions:
+        tags = tuple(w for w in cap.split() if w.startswith("#"))
+        assert len(tags) == 4
+        hashtag_sets.add(tags)
+    assert len(hashtag_sets) >= 3
+
+
+def test_build_caption_no_money_or_rainbow_emoji():
+    banned = {"🌈", "💰", "💸", "🤑", "💎", "🏎️", "🚘", "🛥️", "🛩️", "🏰", "👑"}
+    cap = build_caption("Risk controls", "checklist", include_url=False, needs_disclosure=False, seed=99)
+    assert not any(e in cap for e in banned)
