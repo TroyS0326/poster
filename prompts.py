@@ -95,55 +95,84 @@ def should_include_url(pillar: str, archetype: str, seed: int | None = None) -> 
     return rng.random() < 0.42
 
 
-def build_hashtags(pillar: str, archetype: str) -> list[str]:
-    mapping = {
-        "paper": ["#PaperTrading", "#TradingPlaybook", "#TradingRules"],
-        "automation": ["#TradingAutomation", "#ExecutionDiscipline", "#RuleBasedExecution"],
-        "scanner": ["#MarketScanner", "#TradeManagement", "#TradingRules"],
-        "risk": ["#RiskControls", "#TradingDiscipline", "#BracketOrders"],
-        "bracket": ["#BracketOrders", "#TradeManagement", "#RiskControls"],
-        "playbook": ["#TradingPlaybook", "#ProcessOverImpulse", "#RuleBasedExecution"],
-    }
+def build_hashtags(pillar: str, archetype: str, seed: int | None = None) -> list[str]:
+    rng = random.Random(seed) if seed is not None else random
     blob = f"{pillar} {archetype}".lower()
-    selected = []
-    for key, tags in mapping.items():
+    topical_map = {
+        "paper": ["#PaperTrading", "#TradingPlaybook", "#TradingRules", "#TradeReview", "#PlaybookFirst"],
+        "automation": ["#TradingAutomation", "#RuleBasedExecution", "#ExecutionDiscipline", "#TradingProcess"],
+        "scanner": ["#MarketScanner", "#SetupQuality", "#TradingRules", "#TradeManagement"],
+        "risk": ["#RiskControls", "#RiskManagement", "#BracketOrders", "#TradingDiscipline"],
+        "bracket": ["#BracketOrders", "#TradeManagement", "#RiskControls", "#ExecutionDiscipline"],
+        "playbook": ["#TradingPlaybook", "#PlaybookFirst", "#RuleBasedExecution", "#ProcessOverImpulse"],
+        "discipline": ["#TradingDiscipline", "#DisciplineOverImpulse", "#TradingProcess", "#TradingRules"],
+    }
+    pool = [
+        "#TradingDiscipline", "#RuleBasedExecution", "#RiskControls", "#TradingPlaybook", "#PaperTrading",
+        "#ExecutionDiscipline", "#TradingAutomation", "#DayTrading", "#TradeManagement", "#ProcessOverImpulse",
+        "#TradingRules", "#MarketScanner", "#BracketOrders", "#TradingProcess", "#RiskManagement", "#SetupQuality",
+        "#TradeReview", "#PlaybookFirst", "#DisciplineOverImpulse",
+    ]
+    for key, tags in topical_map.items():
         if key in blob:
-            selected = tags
+            pool = list(dict.fromkeys(tags + pool))
             break
-    if not selected:
-        selected = ["#TradingDiscipline", "#RuleBasedExecution", "#RiskControls"]
-    return ["#XeanVI", *selected[:3]]
+    picked = rng.sample(pool, k=3)
+    return ["#XeanVI", *picked]
 
 
-def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosure: bool) -> str:
-    pillar_txt = (pillar or "process discipline").strip().lower()
+def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosure: bool, seed: int | None = None) -> str:
+    rng = random.Random(seed) if seed is not None else random
     archetype_txt = (archetype or "lesson learned").strip().lower()
-    hook = {
-        "confession": "I used to think more screen time meant better outcomes, but it usually meant more noise.",
-        "hard truth": "Hard truth: discipline is built before the trade, not after the chart moves.",
-        "mini story": "A quick story: one rushed decision can undo hours of careful preparation.",
-        "myth vs reality": "Myth: speed alone wins. Reality: structure and review keep decisions consistent.",
-        "founder note": "Founder note: every workflow decision starts with clarity before automation.",
-        "trader mistake breakdown": "Common mistake: reacting first and documenting later creates repeated errors.",
-        "checklist": "Checklist mindset beats impulse when market pressure starts to climb.",
-        "one sharp rule": "One sharp rule: if the setup misses your criteria, skip it without negotiation.",
-        "behind the product": "Behind the product, we focus on visibility, controls, and accountable execution steps.",
-        "quiet warning": "Quiet warning: small rule breaks compound faster than most people expect.",
-        "before/after mindset": "Before: chasing every move. After: following a defined process and accepting patience.",
-        "lesson learned": "Lesson learned: repeatable process matters more than dramatic single-session decisions.",
-    }.get(archetype_txt, "Discipline starts with clear rules and measured decisions.")
-    emoji = random.choice(APPROVED_EMOJIS) if random.random() < 0.5 else ""
-    hook_line = f"{hook} {emoji}".strip()
+    pillar_txt = (pillar or "trading process").strip().lower()
 
-    insight_1 = f"For {pillar_txt}, define conditions before pressure shows up and review risk before action."
-    insight_2 = "Document what qualified or failed the setup so future execution stays grounded and repeatable."
-    tie_in = "XeanVI helps enforce user-defined rules and keeps validation visible across each execution step."
-    cta = f"Explore XeanVI: {BRAND_URL}" if include_url else "Build the process before the pressure hits."
+    hooks = {
+        "confession": ["I learned this late: activity is not discipline.", "Confession: I used to confuse motion with progress."],
+        "hard truth": ["Hard truth: your rules matter most when you want to break them.", "Hard truth: boredom can look like conviction if your process is weak."],
+        "mini story": ["A quick story: one impulsive click erased a full week of clean execution.", "Mini story: the setup I skipped saved my process, not my ego."],
+        "myth vs reality": ["Myth: more trades means more edge. Reality: better filters create cleaner decisions."],
+        "founder note": ["Founder note: we built around pre-commitment, not prediction.", "Founder note: the product starts with your rules, not ours."],
+        "trader mistake breakdown": ["Common mistake: changing criteria after the setup appears.", "Mistake breakdown: entries are rarely the first failure; preparation is."],
+        "checklist": ["Checklist reminder: if the plan is vague, execution becomes emotional."],
+        "one sharp rule": ["One sharp rule: if it fails one rule, it fails the trade."],
+        "behind the product": ["Behind the product: every step is designed to keep decision logic visible."],
+        "quiet warning": ["Quiet warning: one exception today becomes a pattern tomorrow."],
+        "before/after mindset": ["Before: reacting to every candle. After: respecting pre-session criteria."],
+        "lesson learned": ["Lesson learned: consistency starts before the first order is considered."],
+    }
+    insights = [
+        "A bad setup does not become better because you are bored.",
+        "If your rules disappear under pressure, they were not operational yet.",
+        "The trade you skip can be the one that proves your system is working.",
+        f"For {pillar_txt}, define invalidation first and decision speed second.",
+        "Journal the rejected setups too; that is where discipline compounds.",
+    ]
+    tie_ins = [
+        "XeanVI helps enforce user-defined rules so process quality is visible before execution.",
+        "XeanVI supports rule-based execution with validation checkpoints you can review.",
+        "XeanVI keeps your playbook checks explicit, so decisions stay tied to defined criteria.",
+    ]
+    cta_url = [
+        f"See how it works: {BRAND_URL}",
+        f"Review the workflow at {BRAND_URL}",
+    ]
+    cta_no_url = [
+        "Run your checklist before the market asks for speed.",
+        "Protect the process first, then scale execution.",
+        "Audit your rules today, not after the session.",
+    ]
+
+    hook = rng.choice(hooks.get(archetype_txt, hooks["lesson learned"]))
+    emoji = f" {rng.choice(APPROVED_EMOJIS)}" if rng.random() < 0.45 else ""
+    hook_line = f"{hook}{emoji}"
+    insight_1, insight_2 = rng.sample(insights, k=2)
+    tie_in = rng.choice(tie_ins)
+    cta = rng.choice(cta_url if include_url else cta_no_url)
 
     lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
     if needs_disclosure:
         lines.extend(["", DISCLOSURE])
-    lines.extend(["", " ".join(build_hashtags(pillar, archetype))])
+    lines.extend(["", " ".join(build_hashtags(pillar, archetype, seed=seed))])
     return "\n".join(lines).strip()
 
 
