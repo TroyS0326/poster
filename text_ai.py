@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import time
 
@@ -6,6 +7,55 @@ import requests
 from prompts import CONTENT_PILLARS, IMAGE_PROMPT_TEMPLATES, POST_ARCHETYPES, SYSTEM_PROMPT, VISUAL_DIRECTIONS
 
 REQUIRED_PACKAGE_FIELDS = ["pillar", "archetype", "caption", "image_concept", "image_prompt", "negative_prompt"]
+
+
+def _content_history_path(config):
+    log_path = getattr(config, "log_path", "logs/xeanvi_social_bot.log")
+    return os.path.join(os.path.dirname(log_path) or ".", "content_angle_history.json")
+
+
+def _load_content_angle_history(config, logger):
+    path = _content_history_path(config)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return data[-30:]
+    except FileNotFoundError:
+        return []
+    except Exception as exc:
+        logger.warning("content angle history load failed: %s", exc)
+    return []
+
+
+def _save_content_angle_history(path, history, logger):
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(history[-30:], f)
+    except Exception as exc:
+        logger.warning("content angle history save failed: %s", exc)
+
+
+def _select_content_angle(history, seed=None):
+    rng = random if seed is None else random.Random(seed)
+    recent3_pillars = {h.get("pillar") for h in history[-3:]}
+    recent2_arch = {h.get("archetype") for h in history[-2:]}
+    recent2_visual = {h.get("visual_direction") for h in history[-2:]}
+    recent_pairs = {(h.get("pillar"), h.get("archetype")) for h in history[-10:]}
+    pillar_options = [p for p in CONTENT_PILLARS if p not in recent3_pillars] or list(CONTENT_PILLARS)
+    arch_options = [a for a in POST_ARCHETYPES if a not in recent2_arch] or list(POST_ARCHETYPES)
+    visual_options = [v for v in VISUAL_DIRECTIONS if v not in recent2_visual] or list(VISUAL_DIRECTIONS)
+
+    allowed_pairs = [(p, a) for p in pillar_options for a in arch_options if (p, a) not in recent_pairs]
+    if allowed_pairs:
+        pillar, archetype = rng.choice(allowed_pairs)
+    else:
+        pillar = rng.choice(pillar_options)
+        archetype = rng.choice(arch_options)
+
+    visual_direction = rng.choice(visual_options)
+    return {"pillar": pillar, "archetype": archetype, "visual_direction": visual_direction}
 
 
 def _extract_json(text: str) -> dict | None:
@@ -99,7 +149,10 @@ def _fallback_package(pillar: str, archetype: str) -> dict:
     packages = _fallback_packages()
     matches = [p for p in packages if p["pillar"] == pillar or p["archetype"] == archetype]
     pool = matches if matches else packages
-    return random.choice(pool)
+    selected = random.choice(pool).copy()
+    selected["pillar"] = pillar
+    selected["archetype"] = archetype
+    return selected
 
 
 def _is_valid_package(package: dict) -> bool:
@@ -109,9 +162,11 @@ def _is_valid_package(package: dict) -> bool:
 
 
 def generate_content_package(config, logger):
-    pillar = random.choice(CONTENT_PILLARS)
-    archetype = random.choice(POST_ARCHETYPES)
-    visual_direction = random.choice(VISUAL_DIRECTIONS)
+    history = _load_content_angle_history(config, logger)
+    selection = _select_content_angle(history)
+    pillar = selection["pillar"]
+    archetype = selection["archetype"]
+    visual_direction = selection["visual_direction"]
     uniqueness_seed = f"{int(time.time())}-{random.randint(1000, 9999)}"
     logger.info("content selection pillar=%s archetype=%s visual=%s", pillar, archetype, visual_direction)
 
@@ -131,19 +186,25 @@ def generate_content_package(config, logger):
         response.raise_for_status()
     except requests.RequestException as exc:
         logger.warning("gemini request failed: %s; using fallback", exc)
-        return _fallback_package(pillar, archetype)
+        fallback = _fallback_package(pillar, archetype)
+        fallback["visual_direction"] = visual_direction
+        return fallback
 
     try:
         response_json = response.json()
         text = response_json["candidates"][0]["content"]["parts"][0]["text"]
     except (ValueError, KeyError, IndexError, TypeError) as exc:
         logger.warning("gemini response parsing failed: %s; using fallback", exc)
-        return _fallback_package(pillar, archetype)
+        fallback = _fallback_package(pillar, archetype)
+        fallback["visual_direction"] = visual_direction
+        return fallback
 
     parsed = _extract_json(text)
     if not _is_valid_package(parsed):
         logger.warning("gemini parsed package missing required fields; using fallback")
-        return _fallback_package(pillar, archetype)
+        fallback = _fallback_package(pillar, archetype)
+        fallback["visual_direction"] = visual_direction
+        return fallback
 
     if visual_direction.startswith("template:"):
         template_id = visual_direction.split(":", 1)[1].strip().lower()
@@ -151,4 +212,7 @@ def generate_content_package(config, logger):
         if template:
             parsed["image_prompt"] = template["prompt"]
 
+    parsed["pillar"] = pillar
+    parsed["archetype"] = archetype
+    parsed["visual_direction"] = visual_direction
     return parsed
