@@ -41,7 +41,12 @@ BRAND_URL = "https://xeanvi.com"
 APPROVED_EMOJIS = ["🧠", "⚙️", "📊", "✅", "🛡️", "🔍"]
 MONEY_LUXURY_EMOJIS = ["💰", "💸", "🤑", "💎", "🏎️", "🚘", "🛥️", "🛩️", "🏰", "👑"]
 HASHTAG_POOL = ["#XeanVI", "#TradingDiscipline", "#RuleBasedExecution", "#RiskControls", "#TradingPlaybook", "#PaperTrading", "#ExecutionDiscipline", "#TradingAutomation", "#DayTrading", "#TradeManagement", "#ProcessOverImpulse", "#TradingRules", "#MarketScanner", "#BracketOrders"]
-RISK_TERMS = {"trading", "live trading", "execution", "risk", "bracket orders", "stop-loss", "target", "broker", "order", "scanner", "market", "entries", "exits", "trade setup", "playbook enforcement"}
+RISK_TERMS = {
+    "trading", "live trading", "execution", "risk", "bracket orders", "stop-loss", "target", "broker", "order", "scanner", "market",
+    "trade", "trades", "no-trade", "setup", "setups", "entry", "entries", "exit", "exits", "loss", "losses", "sizing", "volatility",
+    "capital", "live capital", "position", "positions", "invalidation", "stop", "stops", "bracket", "brackets", "trade setup",
+    "playbook enforcement",
+}
 URL_CTA_HINTS = {"product", "feature", "website", "signup", "learn more", "try", "explore", "demo", "platform"}
 
 COMPLIANCE_NEGATIVE_KEYWORDS = {
@@ -288,6 +293,14 @@ MICRO_STORIES = [
     "I learned this from a no-trade day that saved my process.",
 ]
 
+SAFE_EXPANSION_LINES = [
+    "That makes the review cleaner when pressure shows up.",
+    "The goal is fewer improvised decisions under stress.",
+    "That keeps the post-session review tied to observable behavior.",
+]
+
+WORD_RE = re.compile(r"\b[\w'-]+\b")
+
 
 def _pillar_key(text: str) -> str:
     t = (text or "").lower()
@@ -313,6 +326,10 @@ def _pillar_key(text: str) -> str:
     return "plan"
 
 
+def _caption_word_count(text: str) -> int:
+    return len(WORD_RE.findall(text or ""))
+
+
 def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosure: bool, seed: int | None = None) -> str:
     rng = random.Random(seed) if seed is not None else random
     archetype_txt = (archetype or "lesson learned").strip().lower()
@@ -335,7 +352,13 @@ def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosu
             _, insight_2 = rng.choice(alt)
 
     tie_in = rng.choice(TIE_INS)
-    cta = rng.choice(CTA_URL if include_url else CTA_NO_URL)
+    cta_source = CTA_URL if include_url else CTA_NO_URL
+    cta = rng.choice(cta_source)
+
+    if _caption_word_count(f"{hook_line} {insight_1} {insight_2} {tie_in} {cta}") < 45 and not include_url:
+        longer_ctas = [x for x in CTA_NO_URL if _caption_word_count(x) >= 8]
+        if longer_ctas:
+            cta = rng.choice(longer_ctas)
 
     body_lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
     hashtag_line = " ".join(build_hashtags(pillar, archetype, seed=seed))
@@ -346,7 +369,35 @@ def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosu
     if effective_needs_disclosure:
         lines.extend(["", DISCLOSURE])
     lines.extend(["", hashtag_line])
-    return "\n".join(lines).strip()
+    caption = "\n".join(lines).strip()
+
+    wc = _caption_word_count(caption)
+    if wc < 45:
+        expanded_insight_2 = f"{insight_2} {rng.choice(SAFE_EXPANSION_LINES)}"
+        body_lines = [hook_line, "", insight_1, expanded_insight_2, "", tie_in, "", cta]
+        final_caption_without_disclosure = "\n".join([*body_lines, "", hashtag_line]).strip()
+        effective_needs_disclosure = needs_disclosure or needs_risk_disclosure(final_caption_without_disclosure)
+        lines = list(body_lines)
+        if effective_needs_disclosure:
+            lines.extend(["", DISCLOSURE])
+        lines.extend(["", hashtag_line])
+        caption = "\n".join(lines).strip()
+        wc = _caption_word_count(caption)
+
+    if wc > 90 and " " in hook:
+        shorter_hook = hook.split(".")[0].strip()
+        if shorter_hook and shorter_hook != hook:
+            hook_line = f"{shorter_hook}{emoji}"
+            body_lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
+            final_caption_without_disclosure = "\n".join([*body_lines, "", hashtag_line]).strip()
+            effective_needs_disclosure = needs_disclosure or needs_risk_disclosure(final_caption_without_disclosure)
+            lines = list(body_lines)
+            if effective_needs_disclosure:
+                lines.extend(["", DISCLOSURE])
+            lines.extend(["", hashtag_line])
+            caption = "\n".join(lines).strip()
+
+    return caption
 def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: bool) -> str:
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     text = re.sub(re.escape(DISCLOSURE), "", text, flags=re.IGNORECASE).strip()

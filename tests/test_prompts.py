@@ -1,5 +1,9 @@
+import re
+
 from prompts import APPROVED_EMOJIS, BRAND_URL, CONTENT_PILLARS, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, POST_ARCHETYPES, build_caption, build_hashtags, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
 from quality import validate_caption
+
+WORD_RE = re.compile(r"\b[\w'-]+\b")
 
 
 def test_disclosure_needed_for_risk_terms():
@@ -249,6 +253,69 @@ def test_build_caption_matrix_always_validates_final_caption():
                 assert ok, reason
 
 
+def test_build_caption_matrix_word_count_45_to_90():
+    for idx, pillar in enumerate(CONTENT_PILLARS):
+        for archetype in POST_ARCHETYPES:
+            for seed in range(20):
+                include_url = ((idx + seed) % 2 == 0)
+                needs = needs_risk_disclosure(f"{pillar} {archetype} raw")
+                caption = build_caption(pillar, archetype, include_url, needs, seed=seed)
+                word_count = len(WORD_RE.findall(caption))
+                assert 45 <= word_count <= 90, (pillar, archetype, seed, word_count, caption)
+
+
+def test_risk_term_disclosure_regression():
+    phrases = [
+        "no rule, no trade",
+        "the setup failed",
+        "entry criteria",
+        "post-loss reset",
+        "position sizing",
+        "volatility spiked",
+        "live capital",
+        "invalidation first",
+        "bracket boundary",
+        "stop placement",
+    ]
+    for phrase in phrases:
+        text = f"Hook. Insight. {phrase}. #XeanVI #TradingRules #RiskControls #ExecutionDiscipline"
+        assert needs_risk_disclosure(text), phrase
+
+
+def test_final_caption_disclosure_regression_matrix():
+    for pillar in CONTENT_PILLARS:
+        for archetype in POST_ARCHETYPES:
+            for seed in range(21):
+                include_url = (seed % 2 == 0)
+                caption = build_caption(pillar, archetype, include_url, needs_disclosure=False, seed=seed)
+                if needs_risk_disclosure(caption):
+                    assert DISCLOSURE in caption
+                assert caption.count(DISCLOSURE) <= 1
+
+
+def test_caption_format_regression():
+    samples = [
+        build_caption(CONTENT_PILLARS[i % len(CONTENT_PILLARS)], POST_ARCHETYPES[i % len(POST_ARCHETYPES)], include_url=(i % 2 == 0), needs_disclosure=False, seed=i)
+        for i in range(24)
+    ]
+    for cap in samples:
+        blocks = [b.strip() for b in cap.split("\n\n") if b.strip()]
+        assert len(blocks) in (5, 6), cap
+        assert len(blocks[0].splitlines()) == 1
+        assert len(blocks[1].splitlines()) == 2
+        assert blocks[2].startswith("XeanVI")
+        assert not blocks[3].startswith("#")
+        if len(blocks) == 6:
+            assert blocks[4] == DISCLOSURE
+            hashtag_block = blocks[5]
+        else:
+            hashtag_block = blocks[4]
+        tags = hashtag_block.split()
+        assert len(tags) == 4
+        assert all(t.startswith("#") for t in tags)
+        assert "#XeanVI" in tags
+
+
 def test_seeded_caption_uniqueness_50_samples():
     captions = [
         build_caption("Risk controls before entries", "checklist", include_url=(i % 2 == 0), needs_disclosure=True, seed=i)
@@ -257,6 +324,11 @@ def test_seeded_caption_uniqueness_50_samples():
     assert len(set(captions)) >= 25
     hook_lines = {c.splitlines()[0] for c in captions}
     assert len(hook_lines) >= 10
+    normalized_hooks = {
+        " ".join(w for w in line.split() if w not in APPROVED_EMOJIS).strip()
+        for line in hook_lines
+    }
+    assert len(normalized_hooks) >= 5
     hashtag_sets = {
         tuple(line.split())
         for c in captions
