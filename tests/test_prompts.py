@@ -1,4 +1,5 @@
-from prompts import BRAND_URL, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, APPROVED_EMOJIS, build_caption, build_hashtags, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
+from prompts import APPROVED_EMOJIS, BRAND_URL, CONTENT_PILLARS, DISCLOSURE, IMAGE_PROMPT_TEMPLATES, POST_ARCHETYPES, build_caption, build_hashtags, needs_risk_disclosure, repair_caption_compliance, sanitize_caption_policy, should_include_url
+from quality import validate_caption
 
 
 def test_disclosure_needed_for_risk_terms():
@@ -166,7 +167,10 @@ def test_build_caption_disclosure_exactly_once_when_required():
 
 def test_build_caption_without_disclosure_when_not_required():
     cap = build_caption("Founder/build-in-public", "founder note", include_url=False, needs_disclosure=False)
-    assert DISCLOSURE not in cap
+    if needs_risk_disclosure(cap):
+        assert DISCLOSURE in cap
+    else:
+        assert DISCLOSURE not in cap
 
 
 def test_build_caption_url_exactly_once_when_requested():
@@ -232,3 +236,14 @@ def test_build_caption_no_money_or_rainbow_emoji():
     banned = {"🌈", "💰", "💸", "🤑", "💎", "🏎️", "🚘", "🛥️", "🛩️", "🏰", "👑"}
     cap = build_caption("Risk controls", "checklist", include_url=False, needs_disclosure=False, seed=99)
     assert not any(e in cap for e in banned)
+
+
+def test_build_caption_matrix_always_validates_final_caption():
+    for idx, pillar in enumerate(CONTENT_PILLARS):
+        for archetype in POST_ARCHETYPES:
+            for seed in range(10):
+                include_url = ((idx + seed) % 2 == 0)
+                needs = needs_risk_disclosure(f"{pillar} {archetype} raw")
+                caption = build_caption(pillar, archetype, include_url, needs, seed=seed)
+                ok, reason = validate_caption(caption)
+                assert ok, reason
