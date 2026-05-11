@@ -247,3 +247,65 @@ def test_build_caption_matrix_always_validates_final_caption():
                 caption = build_caption(pillar, archetype, include_url, needs, seed=seed)
                 ok, reason = validate_caption(caption)
                 assert ok, reason
+
+
+def test_seeded_caption_uniqueness_50_samples():
+    captions = [
+        build_caption("Risk controls before entries", "checklist", include_url=(i % 2 == 0), needs_disclosure=True, seed=i)
+        for i in range(50)
+    ]
+    assert len(set(captions)) >= 25
+    hook_lines = {c.splitlines()[0] for c in captions}
+    assert len(hook_lines) >= 10
+    hashtag_sets = {
+        tuple(line.split())
+        for c in captions
+        for line in c.splitlines()
+        if line.startswith("#")
+    }
+    assert len(hashtag_sets) >= 10
+
+
+def test_pillar_specific_language_presence():
+    keyword_map = {
+        "Revenge trading after one bad loss": ["loss", "revenge", "reset", "next decision"],
+        "Paper trading as a serious testing lab, not a toy": ["paper", "simulated", "lab", "testing"],
+        "Bracket orders as emotional guardrails": ["bracket", "guardrail", "boundary"],
+        "The difference between scanning and chasing": ["scanner", "scanning", "chasing", "filter"],
+        "Overtrading from boredom": ["bored", "boredom", "low-quality"],
+        "Building a playbook before live capital": ["playbook", "rules", "criteria"],
+    }
+    for pillar, words in keyword_map.items():
+        caps = [build_caption(pillar, "lesson learned", include_url=False, needs_disclosure=True, seed=s) for s in range(8)]
+        joined = "\n".join(caps).lower()
+        assert any(w in joined for w in words), f"missing keyword for {pillar}"
+
+
+def test_compliance_regression_100_samples():
+    banned_phrases = [
+        "profit", "profits", "profitable", "guaranteed", "guarantee", "passive income", "win rate", "risk-free",
+        "get rich", "make money", "easy income", "flawless execution", "perfect setup", "best strategy",
+        "smarter execution", "empower your trading", "elevate your trading",
+    ]
+    banned_emoji = {"🌈", "💰", "💸", "🤑", "💎", "🏎️", "🚘", "🛥️", "🛩️", "🏰", "👑"}
+    samples = []
+    for i in range(100):
+        pillar = CONTENT_PILLARS[i % len(CONTENT_PILLARS)]
+        archetype = POST_ARCHETYPES[i % len(POST_ARCHETYPES)]
+        cap = build_caption(pillar, archetype, include_url=(i % 3 == 0), needs_disclosure=True, seed=i)
+        samples.append(cap)
+    for cap in samples:
+        assert not any(e in cap for e in banned_emoji)
+        assert sum(cap.count(e) for e in APPROVED_EMOJIS) <= 1
+        tags = [w for w in cap.split() if w.startswith("#")]
+        assert len(tags) == 4
+        assert "#XeanVI" in tags
+        lowered = cap.lower()
+        assert not any(bp in lowered for bp in banned_phrases)
+
+
+def test_build_caption_url_behavior_exact():
+    with_url = build_caption("Trust/transparency", "founder note", include_url=True, needs_disclosure=False, seed=7)
+    without_url = build_caption("Trust/transparency", "founder note", include_url=False, needs_disclosure=False, seed=7)
+    assert with_url.count(BRAND_URL) == 1
+    assert BRAND_URL not in without_url
