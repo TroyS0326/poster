@@ -106,12 +106,15 @@ def build_hashtags(pillar: str, archetype: str, seed: int | None = None) -> list
         "bracket": ["#BracketOrders", "#TradeManagement", "#RiskControls", "#ExecutionDiscipline"],
         "playbook": ["#TradingPlaybook", "#PlaybookFirst", "#RuleBasedExecution", "#ProcessOverImpulse"],
         "discipline": ["#TradingDiscipline", "#DisciplineOverImpulse", "#TradingProcess", "#TradingRules"],
+        "hesitating": ["#DecisionQuality", "#ExecutionDiscipline", "#ProcessOverImpulse", "#TradeReview"],
+        "boredom": ["#Overtrading", "#ProcessOverImpulse", "#TradingRules", "#DisciplineOverImpulse"],
     }
     pool = [
         "#TradingDiscipline", "#RuleBasedExecution", "#RiskControls", "#TradingPlaybook", "#PaperTrading",
         "#ExecutionDiscipline", "#TradingAutomation", "#DayTrading", "#TradeManagement", "#ProcessOverImpulse",
         "#TradingRules", "#MarketScanner", "#BracketOrders", "#TradingProcess", "#RiskManagement", "#SetupQuality",
-        "#TradeReview", "#PlaybookFirst", "#DisciplineOverImpulse",
+        "#TradeReview", "#PlaybookFirst", "#DisciplineOverImpulse", "#DecisionQuality", "#PreMarketRoutine",
+        "#BehavioralEdge", "#Overtrading", "#RiskFirst",
     ]
     for key, tags in topical_map.items():
         if key in blob:
@@ -121,53 +124,218 @@ def build_hashtags(pillar: str, archetype: str, seed: int | None = None) -> list
     return ["#XeanVI", *picked]
 
 
+HOOK_BANK = {
+    "confession": [
+        "Confession: I broke my own rule to avoid being wrong.",
+        "Confession: I called it discipline while I was actually hesitating.",
+        "Confession: I chased activity when patience was the edge.",
+        "Confession: I used to count trades instead of quality.",
+        "Confession: one emotional click cost more than a missed setup.",
+    ],
+    "hard truth": [
+        "Hard truth: urgency is usually unplanned risk.",
+        "Hard truth: one broken rule can reset a month of progress.",
+        "Hard truth: boredom creates fake conviction.",
+        "Hard truth: if criteria move, discipline is already gone.",
+        "Hard truth: most mistakes are approved before entry.",
+    ],
+    "mini story": [
+        "Mini story: I skipped one setup and kept the whole process intact.",
+        "Mini story: the second click was the expensive one.",
+        "Mini story: hesitation looked safe until it became a habit.",
+        "Mini story: I followed the plan and still had to accept a loss.",
+        "Mini story: a no-trade day preserved more than forcing a setup.",
+    ],
+    "myth vs reality": [
+        "Myth: more screen time means better decisions. Reality: better filters do.",
+        "Myth: fast reaction is edge. Reality: prepared criteria is edge.",
+        "Myth: confidence prevents mistakes. Reality: checklists prevent drift.",
+        "Myth: missing a move is failure. Reality: forcing one is.",
+        "Myth: automation is prediction. Reality: automation is pre-commitment.",
+    ],
+    "founder note": [
+        "Founder note: we built this from repeated execution mistakes.",
+        "Founder note: every feature started as a rule I failed to follow.",
+        "Founder note: build-in-public means shipping discipline, not hype.",
+        "Founder note: we track decisions, not bravado.",
+        "Founder note: the product is opinionated about process integrity.",
+    ],
+    "trader mistake breakdown": [
+        "Mistake breakdown: the setup was fine, the process around it was not.",
+        "Mistake breakdown: criteria changed after pressure increased.",
+        "Mistake breakdown: the error happened before the order was placed.",
+        "Mistake breakdown: size expanded before conviction was earned.",
+        "Mistake breakdown: chasing replaced scanning within minutes.",
+    ],
+    "checklist": [
+        "Checklist first: define invalidation before any entry thought.",
+        "Checklist first: if one rule fails, the setup fails.",
+        "Checklist first: clarity beats speed in volatile sessions.",
+        "Checklist first: pre-market decisions protect live decisions.",
+        "Checklist first: no criteria, no click.",
+    ],
+    "one sharp rule": [
+        "One sharp rule: no rule, no trade.",
+        "One sharp rule: if context changed, reassess before action.",
+        "One sharp rule: entries happen only after risk is defined.",
+        "One sharp rule: a skipped setup is cheaper than a forced one.",
+        "One sharp rule: pause beats panic every time.",
+    ],
+    "behind the product": [
+        "Behind the product: we surface checks before any execution step.",
+        "Behind the product: validation is visible on purpose.",
+        "Behind the product: the workflow is built around pre-commitment.",
+        "Behind the product: discipline features ship before convenience features.",
+        "Behind the product: every log line should explain a decision.",
+    ],
+    "quiet warning": [
+        "Quiet warning: exceptions multiply faster than rules.",
+        "Quiet warning: today's shortcut becomes tomorrow's baseline.",
+        "Quiet warning: hesitation can be as costly as impulsive action.",
+        "Quiet warning: emotional relief is not a valid criterion.",
+        "Quiet warning: rushed recovery is still overexposure.",
+    ],
+    "before/after mindset": [
+        "Before: I reacted to movement. After: I reacted to criteria.",
+        "Before: every candle felt urgent. After: only qualified setups mattered.",
+        "Before: I chased confirmation. After: I followed a playbook.",
+        "Before: losses triggered speed. After: losses triggered review.",
+        "Before: I trusted feeling. After: I trusted process notes.",
+    ],
+    "lesson learned": [
+        "Lesson learned: consistency is built before market open.",
+        "Lesson learned: discipline is visible in rejected setups.",
+        "Lesson learned: the best reset is fewer low-quality decisions.",
+        "Lesson learned: process quality beats session intensity.",
+        "Lesson learned: patience is a risk control, not passivity.",
+    ],
+}
+
+PILLAR_INSIGHTS = {
+    "revenge": [("loss", "One bad loss does not deserve a second bad decision."), ("reset", "Reset first, then review the criteria that failed."), ("next_decision", "Your next decision should protect process quality, not ego.")],
+    "paper": [("paper", "Paper sessions are worthless if you only track whether you were right."), ("lab", "Treat simulated reps like a lab: hypothesis, execution, review."), ("testing", "Testing without written criteria teaches speed, not discipline.")],
+    "automation": [("judgment", "Automation should enforce your rules, not replace your judgment."), ("boundaries", "Good automation applies boundaries you defined before pressure."), ("review", "If you cannot explain the rule, do not automate the action.")],
+    "walking": [("walkaway", "No-trade is still a decision when criteria are weak."), ("discipline", "Walking away is a risk control, not a missed opportunity."), ("quality", "Passing on low-quality context protects decision quality.")],
+    "bracket": [("bracket", "A bracket is not decoration; it is a pre-commitment."), ("guardrail", "Bracket boundaries reduce negotiation when volatility spikes."), ("riskfirst", "Risk placement belongs before entry excitement.")],
+    "playbook": [("playbook", "A playbook is only real when criteria are testable."), ("rules", "Rules should be specific enough to reject most setups."), ("criteria", "Build criteria before capital so pressure has less room to improvise.")],
+    "boredom": [("bored", "A bored click is still a rule break."), ("lowquality", "Boredom creates low-quality urgency disguised as opportunity."), ("pace", "If pace is slow, tighten filters instead of forcing activity.")],
+    "trust": [("clarity", "Trust grows when claims stay narrower than outcomes."), ("transparency", "Transparency means saying what the system does not do."), ("scope", "Clear scope beats bold promises every time.")],
+    "founder": [("build", "Building in public means showing mistakes and iterations."), ("feedback", "Founder updates should include tradeoffs, not only wins."), ("process", "Product decisions are better when users can audit the reasoning.")],
+    "scanner": [("scanner", "Scanning is filtering. Chasing is negotiating with FOMO."), ("filter", "A scanner narrows attention to criteria, not excitement."), ("chasing", "Chasing starts when you abandon pre-defined context checks.")],
+    "risk": [("risk", "Define risk controls before entries so pressure cannot rewrite them."), ("sequence", "Risk sequence matters: invalidation first, sizing second, entry third."), ("boundary", "Boundaries fail when they are drafted after emotional arousal.")],
+    "hesitating": [("hesitation", "Hesitation often means criteria were not pre-committed."), ("decision", "Watching a valid setup pass is data; review why the trigger stalled."), ("confidence", "Confidence comes from repeated criteria execution, not prediction.")],
+    "consistency": [("premarket", "Consistency starts in pre-market preparation, not mid-session reactions."), ("routine", "Your opening routine sets the emotional range for the day."), ("check", "A stable process begins with the same checks every session.")],
+    "plan": [("plan", "Abandoning the plan early usually starts with one small exception."), ("patience", "Plan adherence is measured when conditions get uncomfortable."), ("execution", "Early deviation compounds into late-session noise.")],
+}
+
+GENERAL_INSIGHTS = [
+    ("pressure", "Pressure does not create character; it reveals process gaps."),
+    ("criteria", "If criteria are vague, emotions will fill the gaps."),
+    ("review", "Review is where discipline is rebuilt after difficult sessions."),
+    ("risk", "Fast markets punish unclear boundaries first."),
+    ("process", "Process quality is measurable in the setups you reject."),
+    ("timing", "Speed without structure is still impulsive behavior."),
+    ("journal", "A detailed journal turns frustration into actionable adjustments."),
+    ("context", "Context checks prevent tunnel vision during momentum spikes."),
+    ("prep", "Preparation reduces reaction error when markets accelerate."),
+    ("discipline", "Discipline is a sequence of small pre-commitments."),
+    ("reset", "A short reset can protect the rest of the session."),
+]
+
+FRICTION_LINES = [
+    ("urge", "The urge to recover fast is usually the signal to slow down."),
+    ("fomo", "FOMO gets louder when your checklist gets quieter."),
+    ("fatigue", "Decision fatigue makes average setups look urgent."),
+    ("ego", "Ego wants immediate payback; process wants repeatability."),
+    ("noise", "Noise feels actionable when boundaries are not explicit."),
+    ("speed", "Most rushed clicks begin as unresolved uncertainty."),
+    ("drift", "Small rule drift compounds into large execution errors."),
+    ("hesitation", "Hesitation grows when entry criteria are not rehearsed."),
+]
+
+TIE_INS = [
+    "XeanVI helps enforce user-defined rules so process checks stay visible.",
+    "XeanVI supports rule-based execution with auditable validation steps.",
+    "XeanVI keeps playbook criteria explicit before any execution action.",
+    "XeanVI is built to reinforce pre-commitment during live pressure.",
+    "XeanVI makes decision checkpoints clear so drift is easier to spot.",
+    "XeanVI keeps rule validation in view across the workflow.",
+    "XeanVI helps teams review execution against defined criteria.",
+    "XeanVI supports structured execution without replacing trader judgment.",
+]
+CTA_URL = [
+    f"See the workflow: {BRAND_URL}",
+    f"Review the product notes at {BRAND_URL}",
+    f"Explore the platform details: {BRAND_URL}",
+    f"Read how the process works: {BRAND_URL}",
+    f"Take a look at the build log: {BRAND_URL}",
+]
+CTA_NO_URL = [
+    "Run your checklist before speed asks for shortcuts.",
+    "Protect process quality before you chase activity.",
+    "Write the rule before you test the setup.",
+    "Audit one repeated mistake and remove it this week.",
+    "Define your no-trade conditions before the next session.",
+    "Review rejected setups and tighten your criteria.",
+    "Keep boundaries visible when volatility rises.",
+    "Treat patience like an active risk control.",
+]
+MICRO_STORIES = [
+    "I wrote this after a session where one exception became three.",
+    "This came from reviewing a week of avoidable clicks.",
+    "I used to call this confidence; it was actually urgency.",
+    "This note started as a post-loss reset checklist.",
+    "I learned this from a no-trade day that saved my process.",
+]
+
+
+def _pillar_key(text: str) -> str:
+    t = (text or "").lower()
+    checks = [
+        ("revenge", ["revenge", "bad loss"]),
+        ("plan", ["abandons", "plan too early"]),
+        ("paper", ["paper", "testing lab", "simulated"]),
+        ("automation", ["automation", "replace judgment"]),
+        ("walking", ["walking away", "bad setups"]),
+        ("bracket", ["bracket"]),
+        ("playbook", ["playbook"]),
+        ("boredom", ["boredom", "overtrading"]),
+        ("trust", ["trust", "transparency"]),
+        ("founder", ["founder", "build-in-public"]),
+        ("scanner", ["scanning", "chasing", "scanner"]),
+        ("risk", ["risk controls", "before entries"]),
+        ("hesitating", ["hesitating", "watching a good setup"]),
+        ("consistency", ["consistency", "before the market opens"]),
+    ]
+    for key, words in checks:
+        if any(w in t for w in words):
+            return key
+    return "plan"
+
+
 def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosure: bool, seed: int | None = None) -> str:
     rng = random.Random(seed) if seed is not None else random
     archetype_txt = (archetype or "lesson learned").strip().lower()
-    pillar_txt = (pillar or "trading process").strip().lower()
+    pkey = _pillar_key(pillar)
 
-    hooks = {
-        "confession": ["I learned this late: activity is not discipline.", "Confession: I used to confuse motion with progress."],
-        "hard truth": ["Hard truth: your rules matter most when you want to break them.", "Hard truth: boredom can look like conviction if your process is weak."],
-        "mini story": ["A quick story: one impulsive click erased a full week of clean execution.", "Mini story: the setup I skipped saved my process, not my ego."],
-        "myth vs reality": ["Myth: more trades means more edge. Reality: better filters create cleaner decisions."],
-        "founder note": ["Founder note: we built around pre-commitment, not prediction.", "Founder note: the product starts with your rules, not ours."],
-        "trader mistake breakdown": ["Common mistake: changing criteria after the setup appears.", "Mistake breakdown: entries are rarely the first failure; preparation is."],
-        "checklist": ["Checklist reminder: if the plan is vague, execution becomes emotional."],
-        "one sharp rule": ["One sharp rule: if it fails one rule, it fails the trade."],
-        "behind the product": ["Behind the product: every step is designed to keep decision logic visible."],
-        "quiet warning": ["Quiet warning: one exception today becomes a pattern tomorrow."],
-        "before/after mindset": ["Before: reacting to every candle. After: respecting pre-session criteria."],
-        "lesson learned": ["Lesson learned: consistency starts before the first order is considered."],
-    }
-    insights = [
-        "A bad setup does not become better because you are bored.",
-        "If your rules disappear under pressure, they were not operational yet.",
-        "The trade you skip can be the one that proves your system is working.",
-        f"For {pillar_txt}, define invalidation first and decision speed second.",
-        "Journal the rejected setups too; that is where discipline compounds.",
-    ]
-    tie_ins = [
-        "XeanVI helps enforce user-defined rules so process quality is visible before execution.",
-        "XeanVI supports rule-based execution with validation checkpoints you can review.",
-        "XeanVI keeps your playbook checks explicit, so decisions stay tied to defined criteria.",
-    ]
-    cta_url = [
-        f"See how it works: {BRAND_URL}",
-        f"Review the workflow at {BRAND_URL}",
-    ]
-    cta_no_url = [
-        "Run your checklist before the market asks for speed.",
-        "Protect the process first, then scale execution.",
-        "Audit your rules today, not after the session.",
-    ]
-
-    hook = rng.choice(hooks.get(archetype_txt, hooks["lesson learned"]))
+    hook = rng.choice(HOOK_BANK.get(archetype_txt, HOOK_BANK["lesson learned"]))
+    if archetype_txt in {"mini story", "confession", "founder note"} and rng.random() < 0.45:
+        hook = f"{hook} {rng.choice(MICRO_STORIES)}"
     emoji = f" {rng.choice(APPROVED_EMOJIS)}" if rng.random() < 0.45 else ""
     hook_line = f"{hook}{emoji}"
-    insight_1, insight_2 = rng.sample(insights, k=2)
-    tie_in = rng.choice(tie_ins)
-    cta = rng.choice(cta_url if include_url else cta_no_url)
+
+    pillar_lines = list(PILLAR_INSIGHTS.get(pkey, GENERAL_INSIGHTS))
+    first_cat, insight_1 = rng.choice(pillar_lines)
+
+    candidate_second = [x for x in FRICTION_LINES + GENERAL_INSIGHTS if x[0] != first_cat and x[1] != insight_1]
+    second_cat, insight_2 = rng.choice(candidate_second)
+    if second_cat == first_cat:
+        alt = [x for x in candidate_second if x[0] != first_cat]
+        if alt:
+            _, insight_2 = rng.choice(alt)
+
+    tie_in = rng.choice(TIE_INS)
+    cta = rng.choice(CTA_URL if include_url else CTA_NO_URL)
 
     body_lines = [hook_line, "", insight_1, insight_2, "", tie_in, "", cta]
     hashtag_line = " ".join(build_hashtags(pillar, archetype, seed=seed))
@@ -179,8 +347,6 @@ def build_caption(pillar: str, archetype: str, include_url: bool, needs_disclosu
         lines.extend(["", DISCLOSURE])
     lines.extend(["", hashtag_line])
     return "\n".join(lines).strip()
-
-
 def sanitize_caption_policy(caption: str, needs_disclosure: bool, include_url: bool) -> str:
     text = re.sub(r"\s+", " ", (caption or "")).strip()
     text = re.sub(re.escape(DISCLOSURE), "", text, flags=re.IGNORECASE).strip()
