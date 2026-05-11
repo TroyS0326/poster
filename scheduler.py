@@ -5,7 +5,12 @@ import random
 import time
 from quality import validate_caption, validate_image_prompt
 from prompts import build_caption, needs_risk_disclosure, should_include_url
-from text_ai import generate_content_package
+from text_ai import (
+    _content_history_path,
+    _load_content_angle_history,
+    _save_content_angle_history,
+    generate_content_package,
+)
 from image_ai import generate_image
 from uploader import upload_image
 from meta_poster import post_to_meta
@@ -106,6 +111,17 @@ def run_workflow(config, logger):
     caption_sig = _caption_hash(caption)
     caption_history = (caption_history + [caption_sig])[-50:]
     _save_caption_history(history_path, caption_history, logger)
+    angle_history = _load_content_angle_history(config, logger)
+    angle_path = _content_history_path(config)
+    angle_history.append(
+        {
+            "pillar": package.get("pillar", ""),
+            "archetype": package.get("archetype", ""),
+            "visual_direction": package.get("visual_direction", ""),
+            "created_at": int(time.time()),
+        }
+    )
+    _save_content_angle_history(angle_path, angle_history, logger)
     logger.info("image prompt generated")
     image_result = generate_image(config, image_prompt, negative_prompt, logger)
     if not image_result:
