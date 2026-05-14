@@ -38,6 +38,22 @@ def test_image_prompt_templates_remove_text_directives():
     assert "Add small footer text" not in blob
 
 
+def test_image_prompt_templates_have_unique_ids_and_minimum_count():
+    ids = [t["id"] for t in IMAGE_PROMPT_TEMPLATES]
+    assert len(ids) >= 20
+    assert len(ids) == len(set(ids))
+
+
+def test_image_prompt_templates_require_non_readable_text_language():
+    prompts = [t["prompt"].lower() for t in IMAGE_PROMPT_TEMPLATES]
+    for p in prompts:
+        assert ("no readable text" in p) or ("no readable writing" in p)
+        assert "no letters" in p
+        assert "no words" in p
+        assert "no typography" in p
+        assert "no logos" in p
+
+
 def test_short_caption_expands_to_minimum_words():
     out = sanitize_caption_policy("Discipline first.", needs_disclosure=False, include_url=False)
     assert len(out.split()) >= 45
