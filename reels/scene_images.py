@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+import time
 import os
 from pathlib import Path
 from typing import Any
 
 from PIL import Image
 
+from dotenv import load_dotenv; load_dotenv()
 from image_ai import generate_image
 
 LOGGER = logging.getLogger(__name__)
@@ -63,6 +65,7 @@ def generate_scene_images(storyboard: dict[str, Any], item_dir: Path, *, style: 
     for i, scene in enumerate(scenes, start=1):
         text = str(scene.get("text", "")) if isinstance(scene, dict) else ""
         prompt = scene_prompt(topic, title, text, style_name)
+        time.sleep(3)
         result = generate_image(_Cfg, prompt, "no logos, no text, no watermark", LOGGER)
         out = item_dir / f"scene_{i:02d}.png"
         if result and result.get("local_path"):

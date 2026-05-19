@@ -9,6 +9,8 @@
     "scene_count": 4,
     "generate_background": true,
     "generate_voiceover_placeholder": true,
+    "voiceover_provider": "openai",
+    "voiceover_format": "mp3",
     "render_mp4": false
   },
   "runs": [

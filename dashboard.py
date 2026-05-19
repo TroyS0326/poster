@@ -38,4 +38,4 @@ def reels_outputs(filename):
 
 if __name__ == "__main__":
     os.makedirs('images/generated', exist_ok=True)
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8080")))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8082")))

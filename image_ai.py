@@ -59,80 +59,98 @@ def generate_image_replicate(config, image_prompt: str, negative_prompt: str, lo
             "output_format": config.replicate_output_format or "jpg",
         }
     }
-    try:
-        create_response = requests.post(
-            f"https://api.replicate.com/v1/models/{owner}/{model}/predictions",
-            json=payload,
+
+    # Retry up to 3 times on 429 rate limit
+    create_response = None
+    for attempt in range(3):
+        try:
+            create_response = requests.post(
+                f"https://api.replicate.com/v1/models/{owner}/{model}/predictions",
+                json=payload,
+                headers=headers,
+                timeout=60,
+            )
+        except requests.RequestException as exc:
+            logger.error("replicate request failed: %s", exc)
+            return None
+
+        if create_response.status_code == 429:
+            try:
+                retry_data = create_response.json()
+                wait = int(retry_data.get("retry_after", 10)) + 2
+            except Exception:
+                wait = 12
+            logger.warning("replicate rate limited (attempt %d/3), waiting %ds", attempt + 1, wait)
+            time.sleep(wait)
+            continue
+
+        break
+
+    if create_response is None:
+        return None
+
+    if create_response.status_code in {401, 403}:
+        logger.error("replicate authentication failed; check REPLICATE_API_TOKEN")
+        return None
+    if not create_response.ok:
+        try:
+            error_body = create_response.json()
+        except ValueError:
+            error_body = create_response.text
+        logger.error("replicate create prediction failed with status %s: %s",
+                     create_response.status_code, error_body)
+        return None
+
+    prediction = create_response.json()
+    prediction_id = prediction.get("id")
+    if not prediction_id:
+        logger.error("replicate image generation failed: prediction id missing")
+        return None
+
+    deadline = datetime.utcnow().timestamp() + 180
+    status = prediction.get("status")
+    while status not in {"succeeded", "failed", "canceled"}:
+        if datetime.utcnow().timestamp() > deadline:
+            logger.error("replicate image generation failed: polling timeout")
+            return None
+        poll_response = requests.get(
+            f"https://api.replicate.com/v1/predictions/{prediction_id}",
             headers=headers,
-            timeout=60,
+            timeout=30,
         )
-        if create_response.status_code in {401, 403}:
+        if poll_response.status_code in {401, 403}:
             logger.error("replicate authentication failed; check REPLICATE_API_TOKEN")
             return None
-        if not create_response.ok:
-            try:
-                error_body = create_response.json()
-            except ValueError:
-                error_body = create_response.text
-            logger.error(
-                "replicate create prediction failed with status %s: %s",
-                create_response.status_code,
-                error_body,
-            )
-            return None
-        prediction = create_response.json()
-        prediction_id = prediction.get("id")
-        if not prediction_id:
-            logger.error("replicate image generation failed: prediction id missing")
-            return None
-
-        deadline = datetime.utcnow().timestamp() + 180
+        poll_response.raise_for_status()
+        prediction = poll_response.json()
         status = prediction.get("status")
-        while status not in {"succeeded", "failed", "canceled"}:
-            if datetime.utcnow().timestamp() > deadline:
-                logger.error("replicate image generation failed: polling timeout")
-                return None
-            poll_response = requests.get(
-                f"https://api.replicate.com/v1/predictions/{prediction_id}",
-                headers=headers,
-                timeout=30,
-            )
-            if poll_response.status_code in {401, 403}:
-                logger.error("replicate authentication failed; check REPLICATE_API_TOKEN")
-                return None
-            poll_response.raise_for_status()
-            prediction = poll_response.json()
-            status = prediction.get("status")
-            if status not in {"succeeded", "failed", "canceled"}:
-                time.sleep(2)
+        if status not in {"succeeded", "failed", "canceled"}:
+            time.sleep(2)
 
-        if status != "succeeded":
-            logger.error("replicate image generation failed with status: %s", status)
-            return None
-
-        output = prediction.get("output")
-        if isinstance(output, list):
-            image_url = output[0] if output else None
-        else:
-            image_url = output
-        if not image_url:
-            logger.error("replicate image generation failed: no output URL returned")
-            return None
-
-        image_response = requests.get(image_url, timeout=60)
-        image_response.raise_for_status()
-        filename = _generate_filename()
-        local_path = _save_image_bytes(image_response.content, filename)
-        return {
-            "local_path": local_path,
-            "filename": filename,
-            "image_prompt": image_prompt,
-            "model_name": config.replicate_model,
-            "remote_url": image_url,
-        }
-    except Exception as exc:
-        logger.error("replicate image generation failed: %s", exc)
+    if status != "succeeded":
+        logger.error("replicate image generation failed with status: %s", status)
         return None
+
+    output = prediction.get("output")
+    if isinstance(output, list):
+        image_url = output[0] if output else None
+    else:
+        image_url = output
+    if not image_url:
+        logger.error("replicate image generation failed: no output URL returned")
+        return None
+
+    image_response = requests.get(image_url, timeout=60)
+    image_response.raise_for_status()
+    filename = _generate_filename()
+    local_path = _save_image_bytes(image_response.content, filename)
+    return {
+        "local_path": local_path,
+        "filename": filename,
+        "image_prompt": image_prompt,
+        "model_name": config.replicate_model,
+        "remote_url": image_url,
+    }
 
 
 def generate_image(config, image_prompt: str, negative_prompt: str, logger):
