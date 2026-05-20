@@ -6,6 +6,9 @@ from reels.design_system import PALETTES
 from reels.typography import load_font
 from reels.motion_styles import choose_motion
 
+import logging, os
+logger = logging.getLogger(__name__)
+
 def _hex_to_rgb(h):
     c = h.strip().lstrip("#")
     return tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
@@ -38,6 +41,15 @@ def _short(text, n=9):
     for i in range(n, min(len(words), n+4)):
         if words[i-1].endswith(('.', ',', '!', '?')): return ' '.join(words[:i])
     return ' '.join(words[:n])
+
+def _build_comfy_prompt(config) -> str:
+    """Combine reel scenes into a cinematic LTX Video prompt."""
+    texts = " | ".join(s.text for s in config.scenes[:4])
+    return (
+        f"cinematic slow motion footage, trading and finance theme, {texts[:220]}, "
+        "dark moody office, dramatic lighting, shallow depth of field, "
+        "professional atmosphere, smooth camera motion, 4K quality"
+    )
 
 def _load_bg(config, idx, w, h):
     from PIL import Image
@@ -91,6 +103,9 @@ def render_reel(config: ReelConfig, output_path) -> None:
 
     scene_bgs = [_load_bg(config, i, w, h) for i in range(len(config.scenes))]
 
+    # ── AI video background (Phase 3 ComfyUI) ─────────────────────────────
+    _ai_bg_clip = None  # set below if comfy provider is active
+
     # Load audio and sync video duration to it
     audio_clip = None
     render_duration = config.duration_seconds
@@ -102,6 +117,22 @@ def render_reel(config: ReelConfig, output_path) -> None:
         render_duration = audio_clip.duration
         time_scale = render_duration / max(config.duration_seconds, 0.001)
 
+    # Generate AI background after we know render_duration
+    if os.getenv("REELS_VIDEO_PROVIDER") == "comfy":
+        try:
+            from reels.video_provider_comfy import generate_video
+            from moviepy import VideoFileClip
+            logger.info("Generating AI background via ComfyUI (%.1fs)...", render_duration)
+            _prompt = _build_comfy_prompt(config)
+            _ai_path = generate_video(_prompt, duration_secs=render_duration)
+            _raw = VideoFileClip(_ai_path)
+            # Resize to reel dimensions (portrait 512x896 → config size)
+            _ai_bg_clip = _raw.resized((w, h))
+            logger.info("AI background ready: %s", _ai_path)
+        except Exception as _e:
+            logger.warning("ComfyUI generation failed (%s) — falling back to Ken Burns", _e)
+            _ai_bg_clip = None
+
     def make_frame(t):
         idx, scene, t0 = _scene_for_time(config, t, scale=time_scale)
         seg_dur = scene.duration * time_scale
@@ -109,13 +140,16 @@ def render_reel(config: ReelConfig, output_path) -> None:
         is_hook = (idx == 0)
         is_cta  = (idx == len(config.scenes) - 1)
 
-        base = scene_bgs[idx].copy()
-
-        motion = choose_motion(scene.text)
-        zoom = motion.zoom_start + (motion.zoom_end - motion.zoom_start) * prog
-        zw, zh = int(w / zoom), int(h / zoom)
-        ox, oy = max(0, (w - zw) // 2), max(0, (h - zh) // 2)
-        base = base.crop((ox, oy, ox+zw, oy+zh)).resize((w, h), Image.LANCZOS)
+        if _ai_bg_clip is not None:
+            _ft = min(t, _ai_bg_clip.duration - 0.04)
+            base = Image.fromarray(_ai_bg_clip.get_frame(_ft).astype("uint8"), "RGB")
+        else:
+            base = scene_bgs[idx].copy()
+            motion = choose_motion(scene.text)
+            zoom = motion.zoom_start + (motion.zoom_end - motion.zoom_start) * prog
+            zw, zh = int(w / zoom), int(h / zoom)
+            ox, oy = max(0, (w - zw) // 2), max(0, (h - zh) // 2)
+            base = base.crop((ox, oy, ox+zw, oy+zh)).resize((w, h), Image.LANCZOS)
 
         arr = np.array(base, dtype=np.float32)
         dark = np.array(dark_rgb, dtype=np.float32)
