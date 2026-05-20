@@ -3,6 +3,16 @@ import os
 from pathlib import Path
 from reels.compliance import validate_compliance_text
 
+def _clean_script(script: str) -> str:
+    """Strip spoken-pause markers that TTS engines read aloud."""
+    import re
+    script = re.sub(r"\((?:short |long )?pause\)", " ", script, flags=re.I)
+    script = re.sub(r"\[(?:short |long )?pause\]", " ", script, flags=re.I)
+    script = re.sub(r"<break[^>]*>", " ", script, flags=re.I)
+    script = re.sub(r"\s{2,}", " ", script)
+    return script.strip()
+
+
 class OpenAITTSProvider:
     def generate(self, *, script, output, voice=None, audio_format=None):
         try:
@@ -12,7 +22,7 @@ class OpenAITTSProvider:
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         if not api_key:
             raise ValueError("OPENAI_API_KEY required")
-        script = script.strip()
+        script = _clean_script(script)
         if not script:
             raise ValueError("script must not be empty")
         validate_compliance_text(script, "tts_script")
@@ -35,7 +45,7 @@ class ElevenLabsTTSProvider:
         api_key = os.getenv("ELEVENLABS_API_KEY", "").strip()
         if not api_key:
             raise ValueError("ELEVENLABS_API_KEY required — get one at elevenlabs.io")
-        script = script.strip()
+        script = _clean_script(script)
         if not script:
             raise ValueError("script must not be empty")
         validate_compliance_text(script, "tts_script")
