@@ -109,10 +109,10 @@ def validate_caption(caption: str) -> tuple[bool, str]:
         return False, "caption word count out of range"
 
     needs = needs_risk_disclosure(caption)
-    has = DISCLOSURE.lower() in caption.lower()
-    if needs and not has:
+    has = bool(DISCLOSURE) and DISCLOSURE.lower() in caption.lower()
+    if DISCLOSURE and needs and not has:
         return False, "caption must include disclosure for risk-related content"
-    if caption.lower().count(DISCLOSURE.lower()) > 1:
+    if DISCLOSURE and caption.lower().count(DISCLOSURE.lower()) > 1:
         return False, "duplicate disclosure"
 
     urls = ALLOWED_URL_PATTERN.findall(caption)
