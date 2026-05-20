@@ -97,3 +97,138 @@ def generate_video(prompt: str, duration_secs: float = 5.0, seed: int | None = N
         return mp4
 
     return raw_path
+
+
+# ── compatibility layer for video_clip_generation.py ────────────────────────
+
+class ComfyUIVideoError(RuntimeError):
+    """Raised when ComfyUI generation fails."""
+
+
+def check_comfyui_health(api_url: str = COMFYUI_URL) -> bool:
+    """Return True if ComfyUI is reachable and responsive."""
+    try:
+        r = requests.get(f"{api_url}/system_stats", timeout=5)
+        return r.status_code == 200
+    except requests.RequestException:
+        return False
+
+
+def generate_comfy_video_clip(
+    prompt: str,
+    output_path,
+    *,
+    api_url: str = COMFYUI_URL,
+    workflow_path=WORKFLOW_PATH,
+    prompt_node_id: str = "3",
+    negative_prompt_node_id: str | None = "4",
+    seed_node_id: str | None = "10",
+    width: int = 512,
+    height: int = 896,
+    frames: int = 97,
+    fps: int = 25,
+    timeout_seconds: int = GEN_TIMEOUT,
+    poll_seconds: float = 3.0,
+) -> Path:
+    """
+    Generate a video clip and save to output_path.
+    Matches the signature expected by video_clip_generation.py.
+    Returns Path to the saved mp4.
+    """
+    import random
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Load + patch workflow
+    wf_path = Path(workflow_path)
+    if not wf_path.is_absolute():
+        wf_path = Path(__file__).parent.parent / wf_path
+    with open(wf_path) as f:
+        wf = json.load(f)
+
+    seed = random.randint(0, 2**32 - 1)
+    wf[prompt_node_id]["inputs"]["text"] = prompt
+    if negative_prompt_node_id and negative_prompt_node_id in wf:
+        wf[negative_prompt_node_id]["inputs"]["text"] = (
+            "worst quality, inconsistent motion, blurry, jittery, distorted, watermark, text"
+        )
+    if seed_node_id and seed_node_id in wf:
+        wf[seed_node_id]["inputs"]["noise_seed"] = seed
+
+    # Patch dimensions + frames
+    sampler_node = next((k for k,v in wf.items() if v.get("class_type") == "LTXVBaseSampler"), None)
+    if sampler_node:
+        wf[sampler_node]["inputs"].update({"width": width, "height": height, "num_frames": frames})
+
+    logger.info("ComfyUI clip: %dx%d %d frames seed=%d", width, height, frames, seed)
+
+    # Submit
+    try:
+        resp = requests.post(f"{api_url}/prompt", json={"prompt": wf}, timeout=30)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        raise ComfyUIVideoError(f"Submit failed: {e}") from e
+
+    prompt_id = resp.json()["prompt_id"]
+    logger.info("ComfyUI: queued %s", prompt_id)
+
+    # Poll
+    deadline = time.time() + timeout_seconds
+    output_info = None
+    while time.time() < deadline:
+        time.sleep(poll_seconds)
+        try:
+            hist = requests.get(f"{api_url}/history/{prompt_id}", timeout=10).json()
+        except requests.RequestException:
+            continue
+        if prompt_id in hist:
+            job = hist[prompt_id]
+            if job.get("status", {}).get("status_str") == "error":
+                raise ComfyUIVideoError(f"Generation error: {job['status'].get('messages')}")
+            vhs_out = job.get("outputs", {})
+            for node_out in vhs_out.values():
+                vids = node_out.get("gifs", node_out.get("videos", []))
+                if vids:
+                    output_info = vids[0]
+                    break
+            if output_info:
+                break
+
+    if not output_info:
+        raise ComfyUIVideoError(f"Timed out after {timeout_seconds}s (id={prompt_id})")
+
+    # Grab file
+    fullpath = output_info.get("fullpath")
+    if fullpath and Path(fullpath).exists():
+        raw_path = Path(fullpath)
+    else:
+        fn  = output_info["filename"]
+        url = f"{api_url}/view?filename={fn}&subfolder={output_info.get('subfolder','')}&type={output_info.get('type','output')}"
+        dl  = requests.get(url, timeout=120)
+        dl.raise_for_status()
+        suffix = Path(fn).suffix
+        tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+        tmp.write(dl.content); tmp.close()
+        raw_path = Path(tmp.name)
+
+    # Convert + save to requested output_path
+    if raw_path.suffix.lower() != ".mp4":
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-i", str(raw_path),
+             "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+             "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+             str(output_path)],
+            capture_output=True, text=True
+        )
+        if str(raw_path) != fullpath:
+            os.unlink(raw_path)
+        if result.returncode != 0:
+            raise ComfyUIVideoError(f"ffmpeg failed:\n{result.stderr}")
+    else:
+        import shutil
+        shutil.copy2(raw_path, output_path)
+        if str(raw_path) != fullpath:
+            os.unlink(raw_path)
+
+    logger.info("ComfyUI: saved clip → %s", output_path)
+    return output_path
