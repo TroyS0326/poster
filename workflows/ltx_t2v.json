@@ -1,0 +1,163 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "ltxv-2b-0.9.8-distilled.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "t5xxl_fp8_e4m3fn.safetensors",
+      "type": "ltxv"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "PROMPT_PLACEHOLDER",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "worst quality, inconsistent motion, blurry, jittery, distorted, watermark, text",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "LTXVConditioning",
+    "inputs": {
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "frame_rate": 25
+    }
+  },
+  "6": {
+    "class_type": "LTXVApplySTG",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "block_indices": "14, 19"
+    }
+  },
+  "7": {
+    "class_type": "CFGGuider",
+    "inputs": {
+      "model": [
+        "6",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "5",
+        1
+      ],
+      "cfg": 1.0
+    }
+  },
+  "8": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "euler"
+    }
+  },
+  "9": {
+    "class_type": "LTXVScheduler",
+    "inputs": {
+      "steps": 4,
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "stretch": true,
+      "terminal": 0.1
+    }
+  },
+  "10": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 42
+    }
+  },
+  "11": {
+    "class_type": "LTXVBaseSampler",
+    "inputs": {
+      "model": [
+        "6",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ],
+      "width": 512,
+      "height": 896,
+      "num_frames": 97,
+      "guider": [
+        "7",
+        0
+      ],
+      "sampler": [
+        "8",
+        0
+      ],
+      "sigmas": [
+        "9",
+        0
+      ],
+      "noise": [
+        "10",
+        0
+      ]
+    }
+  },
+  "12": {
+    "class_type": "LTXVTiledVAEDecode",
+    "inputs": {
+      "vae": [
+        "1",
+        2
+      ],
+      "latents": [
+        "11",
+        0
+      ],
+      "horizontal_tiles": 1,
+      "vertical_tiles": 1,
+      "overlap": 1,
+      "last_frame_fix": false
+    }
+  },
+  "13": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": [
+        "12",
+        0
+      ],
+      "frame_rate": 25,
+      "loop_count": 0,
+      "filename_prefix": "ltx_reel",
+      "format": "video/av1-webm",
+      "pingpong": false,
+      "save_output": true
+    }
+  }
+}

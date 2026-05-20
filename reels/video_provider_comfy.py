@@ -1,116 +1,99 @@
-from __future__ import annotations
-
-import json
-import random
-import time
+"""ComfyUI / LTX-Video provider — generates portrait mp4 clips via local RTX 3090."""
+import json, logging, os, random, subprocess, tempfile, time
 from pathlib import Path
-
 import requests
 
+logger = logging.getLogger(__name__)
 
-class ComfyUIVideoError(RuntimeError):
-    pass
-
-
-def check_comfyui_health(api_url: str) -> bool:
-    try:
-        r = requests.get(f"{api_url.rstrip('/')}/system_stats", timeout=5)
-        return r.ok
-    except Exception:
-        return False
+COMFYUI_URL   = os.getenv("COMFYUI_API_URL",      "http://127.0.0.1:8189")
+WORKFLOW_PATH = os.getenv("COMFYUI_WORKFLOW_PATH", "workflows/ltx_t2v.json")
+FPS           = 25
+GEN_TIMEOUT   = int(os.getenv("COMFYUI_TIMEOUT",  "300"))
 
 
-def _set_prompt_value(node: dict, prompt_value: str) -> None:
-    inputs = node.setdefault("inputs", {})
-    if "text" in inputs:
-        inputs["text"] = prompt_value
-    elif "value" in inputs:
-        inputs["value"] = prompt_value
-    else:
-        inputs["text"] = prompt_value
+def _frames_for_duration(seconds: float) -> int:
+    """Closest valid num_frames (must be n*8+1) to target duration."""
+    n = max(0, round((int(seconds * FPS) - 1) / 8))
+    return n * 8 + 1   # 4s→97  5s→121  8s→193
 
 
-def _set_seed_value(node: dict, seed_value: int) -> None:
-    inputs = node.setdefault("inputs", {})
-    if "seed" in inputs:
-        inputs["seed"] = seed_value
-    elif "noise_seed" in inputs:
-        inputs["noise_seed"] = seed_value
-    else:
-        inputs["seed"] = seed_value
+def _load_workflow() -> dict:
+    path = Path(WORKFLOW_PATH)
+    if not path.is_absolute():
+        path = Path(__file__).parent.parent / WORKFLOW_PATH
+    with open(path) as f:
+        return json.load(f)
 
 
-def _download_if_present(node: dict, key: str, api_url: str, output_path: Path) -> bool:
-    for item in node.get(key, []):
-        filename = item.get("filename")
-        subfolder = item.get("subfolder", "")
-        typ = item.get("type", "output")
-        if not filename:
-            continue
-        view = requests.get(
-            f"{api_url.rstrip('/')}/view",
-            params={"filename": filename, "subfolder": subfolder, "type": typ},
-            timeout=120,
-        )
-        view.raise_for_status()
-        if not view.content:
-            raise ComfyUIVideoError(f"ComfyUI returned empty content for {key} output: {filename}")
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(view.content)
-        return True
-    return False
+def generate_video(prompt: str, duration_secs: float = 5.0, seed: int | None = None) -> str:
+    """Generate a clip with LTX Video. Returns path to local mp4."""
+    if seed is None:
+        seed = random.randint(0, 2**32 - 1)
 
+    num_frames = _frames_for_duration(duration_secs)
+    logger.info("ComfyUI: %d frames (%.1fs) seed=%d", num_frames, duration_secs, seed)
 
-def generate_comfy_video_clip(prompt: str, output_path: Path, *, api_url: str, workflow_path: Path, prompt_node_id: str, negative_prompt_node_id: str | None, seed_node_id: str | None, width: int, height: int, frames: int, fps: int, timeout_seconds: int, poll_seconds: int) -> Path:
-    del width, height, frames, fps
-    if not workflow_path.exists():
-        raise ComfyUIVideoError(f"ComfyUI workflow missing: {workflow_path}")
-    try:
-        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise ComfyUIVideoError(f"Unable to load ComfyUI workflow: {exc}") from exc
-    if prompt_node_id not in workflow:
-        raise ComfyUIVideoError(f"Configured COMFYUI_PROMPT_NODE_ID not found in workflow: {prompt_node_id}")
-
-    _set_prompt_value(workflow[prompt_node_id], prompt)
-    if negative_prompt_node_id:
-        if negative_prompt_node_id not in workflow:
-            raise ComfyUIVideoError(f"Configured COMFYUI_NEGATIVE_PROMPT_NODE_ID not found in workflow: {negative_prompt_node_id}")
-        _set_prompt_value(workflow[negative_prompt_node_id], "no readable text, no logos, no broker UI, no financial advice")
-    if seed_node_id:
-        if seed_node_id not in workflow:
-            raise ComfyUIVideoError(f"Configured COMFYUI_SEED_NODE_ID not found in workflow: {seed_node_id}")
-        _set_seed_value(workflow[seed_node_id], random.randint(1, 2**31 - 1))
+    wf = _load_workflow()
+    wf["3"]["inputs"]["text"]        = prompt
+    wf["10"]["inputs"]["noise_seed"] = seed
+    wf["11"]["inputs"]["num_frames"] = num_frames
 
     try:
-        sub = requests.post(f"{api_url.rstrip('/')}/prompt", json={"prompt": workflow}, timeout=30)
-        sub.raise_for_status()
-        prompt_id = sub.json().get("prompt_id")
-    except requests.RequestException as exc:
-        raise ComfyUIVideoError(f"ComfyUI unreachable or prompt submission failed: {exc}") from exc
-    if not prompt_id:
-        raise ComfyUIVideoError("ComfyUI prompt submission failed: missing prompt_id")
+        resp = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": wf}, timeout=30)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        raise RuntimeError(f"ComfyUI submit failed: {e}") from e
 
-    deadline = time.time() + timeout_seconds
+    prompt_id = resp.json()["prompt_id"]
+    logger.info("ComfyUI: queued %s", prompt_id)
+
+    deadline, output_info = time.time() + GEN_TIMEOUT, None
     while time.time() < deadline:
+        time.sleep(3)
         try:
-            hist = requests.get(f"{api_url.rstrip('/')}/history/{prompt_id}", timeout=30)
-            hist.raise_for_status()
-            payload = hist.json().get(prompt_id, {})
-        except requests.RequestException as exc:
-            raise ComfyUIVideoError(f"Failed polling ComfyUI history: {exc}") from exc
-        if payload.get("status", {}).get("status_str") == "error":
-            raise ComfyUIVideoError("ComfyUI generation failed")
-        outputs = payload.get("outputs", {})
-        for node in outputs.values():
-            if _download_if_present(node, "videos", api_url, output_path):
-                return output_path
-            if _download_if_present(node, "gifs", api_url, output_path):
-                return output_path
-            if _download_if_present(node, "images", api_url, output_path):
-                return output_path
-        if outputs:
-            output_keys = sorted({key for node in outputs.values() for key in node.keys()})
-            raise ComfyUIVideoError(f"ComfyUI outputs had no downloadable entries; output keys: {output_keys}")
-        time.sleep(poll_seconds)
-    raise ComfyUIVideoError(f"Timed out waiting for ComfyUI generation after {timeout_seconds}s")
+            hist = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=10).json()
+        except requests.RequestException:
+            continue
+        if prompt_id in hist:
+            job = hist[prompt_id]
+            if job.get("status", {}).get("status_str") == "error":
+                raise RuntimeError(f"ComfyUI error: {job['status'].get('messages')}")
+            node_out = job.get("outputs", {}).get("13", {})
+            videos = node_out.get("gifs", node_out.get("videos", []))
+            if videos:
+                output_info = videos[0]
+                break
+
+    if not output_info:
+        raise TimeoutError(f"ComfyUI timed out after {GEN_TIMEOUT}s (id={prompt_id})")
+
+    # Use fullpath if available (ComfyUI on same host), else download
+    fullpath = output_info.get("fullpath")
+    if fullpath and Path(fullpath).exists():
+        raw_path = fullpath
+        suffix = Path(fullpath).suffix
+    else:
+        fn  = output_info["filename"]
+        url = f"{COMFYUI_URL}/view?filename={fn}&subfolder={output_info.get('subfolder','')}&type={output_info.get('type','output')}"
+        dl  = requests.get(url, timeout=120)
+        dl.raise_for_status()
+        suffix = Path(fn).suffix
+        tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+        tmp.write(dl.content); tmp.close()
+        raw_path = tmp.name
+
+    if suffix.lower() != ".mp4":
+        mp4 = raw_path.replace(suffix, ".mp4")
+        r = subprocess.run(
+            ["ffmpeg", "-y", "-i", raw_path,
+             "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+             "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4],
+            capture_output=True, text=True)
+        if raw_path != fullpath:
+            os.unlink(raw_path)
+        if r.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed:\n{r.stderr}")
+        logger.info("ComfyUI: saved %s", mp4)
+        return mp4
+
+    return raw_path
