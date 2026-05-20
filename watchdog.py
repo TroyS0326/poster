@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 import logging, os, select, signal, subprocess, sys, time
+from dotenv import load_dotenv; load_dotenv()
 from pathlib import Path
 
 MAX_RESTARTS = int(os.getenv("WATCHDOG_MAX_RESTARTS","0"))

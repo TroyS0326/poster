@@ -10,9 +10,10 @@ def _load_json(path):
     with open(path, "r", encoding="utf-8") as f: return json.load(f)
 
 def _build_caption(payload):
+    # Use scene text for caption, not voiceover script (voiceover has pause markers)
     v = payload.get("voiceover") if isinstance(payload, dict) else None
     script = v.get("script") if isinstance(v, dict) else ""
-    if isinstance(script, str) and script.strip(): return script.strip()[:2000]
+    if isinstance(script, str) and script.strip(): return script.strip().replace("(pause)", "").replace("  ", " ").strip()[:2000]
     title = str(payload.get("title","")).strip()
     scenes = payload.get("scenes") if isinstance(payload, dict) else None
     scene_text = ""

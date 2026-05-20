@@ -1,0 +1,168 @@
+{
+  "name": "xeanvi_30_day",
+  "output_root": "outputs/queue",
+  "batch_defaults": {
+    "brand": "xeanvi",
+    "template": "mistake",
+    "visual_style": "fintech_dark",
+    "duration_seconds": 22,
+    "scene_count": 4,
+    "generate_background": true,
+    "generate_voiceover_placeholder": true,
+    "voiceover_provider": "elevenlabs",
+    "voiceover_format": "mp3",
+    "render_mp4": false
+  },
+  "runs": [
+    {"run_id": "day_01", "items": [
+      {"topic": "You knew the setup was wrong and clicked anyway", "slug": "knew_it_was_wrong"},
+      {"topic": "Why revenge trading after a loss destroys your whole week", "slug": "revenge_trading"},
+      {"topic": "The moment you moved your stop loss and it cost you everything", "slug": "moved_stop_loss"}
+    ]},
+    {"run_id": "day_02", "items": [
+      {"topic": "Why traders with winning strategies still lose money", "slug": "winning_strategy_losing"},
+      {"topic": "The pre-market routine that separates profitable traders from the rest", "slug": "premarket_routine"},
+      {"topic": "How FOMO makes you enter trades you already missed", "slug": "fomo_entries"}
+    ]},
+    {"run_id": "day_03", "items": [
+      {"topic": "Why adding to a losing position feels logical but destroys accounts", "slug": "averaging_down"},
+      {"topic": "The emotional spiral after three bad trades in a row", "slug": "emotional_spiral"},
+      {"topic": "How to stop overtrading on slow days out of boredom", "slug": "overtrading_boredom"}
+    ]},
+    {"run_id": "day_04", "items": [
+      {"topic": "Why your system works on paper but fails in live trading", "slug": "paper_vs_live"},
+      {"topic": "The real reason most traders blow up in their first year", "slug": "first_year_blowup"},
+      {"topic": "How letting winners turn into losers kills your confidence", "slug": "winners_to_losers"}
+    ]},
+    {"run_id": "day_05", "items": [
+      {"topic": "Why discipline is a process you build not a personality trait you have", "slug": "discipline_process"},
+      {"topic": "The cost of skipping your trading checklist just one time", "slug": "skipping_checklist"},
+      {"topic": "How to actually follow your trading rules when emotions are high", "slug": "follow_rules_emotions"}
+    ]},
+    {"run_id": "day_06", "items": [
+      {"topic": "Why traders who journal consistently outperform those who do not", "slug": "journaling_edge"},
+      {"topic": "The difference between a trading plan and actually following one", "slug": "plan_vs_execution"},
+      {"topic": "How one bad trade decision compounds into a losing month", "slug": "one_bad_trade"}
+    ]},
+    {"run_id": "day_07", "items": [
+      {"topic": "Why your best trading happens when you are least emotional", "slug": "emotionless_trading"},
+      {"topic": "The setup validation process that keeps bad trades out of your account", "slug": "setup_validation"},
+      {"topic": "How to build a trading system that enforces your own rules", "slug": "self_enforcing_system"}
+    ]},
+    {"run_id": "day_08", "items": [
+      {"topic": "Why paper trading with real rules beats live trading without them", "slug": "paper_trading_rules"},
+      {"topic": "The moment every trader realizes willpower is not enough", "slug": "willpower_not_enough"},
+      {"topic": "How to recover from a drawdown without making it worse", "slug": "drawdown_recovery"}
+    ]},
+    {"run_id": "day_09", "items": [
+      {"topic": "Why the traders who last are not the most talented but the most consistent", "slug": "consistency_over_talent"},
+      {"topic": "The hidden cost of moving your profit target at the last second", "slug": "moving_profit_target"},
+      {"topic": "How to build execution habits that survive high pressure market conditions", "slug": "execution_habits"}
+    ]},
+    {"run_id": "day_10", "items": [
+      {"topic": "Why most traders repeat the same expensive mistakes for years", "slug": "repeating_mistakes"},
+      {"topic": "The checklist that stops you from entering a trade your gut knows is wrong", "slug": "gut_check_list"},
+      {"topic": "How size and risk management separate serious traders from gamblers", "slug": "size_risk_management"}
+    ]},
+    {"run_id": "day_11", "items": [
+      {"topic": "Why your trading edge disappears the moment you stop respecting your process", "slug": "respecting_process"},
+      {"topic": "The psychology behind why traders override their own stops", "slug": "stop_override_psychology"},
+      {"topic": "How to trade with confidence when you have a validated system behind you", "slug": "system_confidence"}
+    ]},
+    {"run_id": "day_12", "items": [
+      {"topic": "Why screen time without structure just reinforces bad habits", "slug": "screen_time_structure"},
+      {"topic": "The difference between reactive trading and planned execution", "slug": "reactive_vs_planned"},
+      {"topic": "How XeanVI locks your rules in before emotions can override them", "slug": "xeanvi_rule_lock"}
+    ]},
+    {"run_id": "day_13", "items": [
+      {"topic": "Why the best traders are obsessed with process not just results", "slug": "process_obsession"},
+      {"topic": "The trade you did not take because your checklist said no", "slug": "checklist_said_no"},
+      {"topic": "How to stop sabotaging good setups with bad execution timing", "slug": "stop_sabotaging"}
+    ]},
+    {"run_id": "day_14", "items": [
+      {"topic": "Why risk management is the only edge that never stops working", "slug": "risk_management_edge"},
+      {"topic": "The mental reset routine every trader needs after a red day", "slug": "red_day_reset"},
+      {"topic": "How building accountability into your process changes everything", "slug": "accountability_process"}
+    ]},
+    {"run_id": "day_15", "items": [
+      {"topic": "Why traders who validate setups before entry keep more of their gains", "slug": "validate_before_entry"},
+      {"topic": "The real cost of one impulsive trade on an otherwise profitable week", "slug": "impulsive_trade_cost"},
+      {"topic": "How to train yourself to sit on your hands when no setup is there", "slug": "sit_on_hands"}
+    ]},
+    {"run_id": "day_16", "items": [
+      {"topic": "Why your trading results are a direct reflection of your process quality", "slug": "results_reflect_process"},
+      {"topic": "The pattern that shows up in every blown trading account", "slug": "blown_account_pattern"},
+      {"topic": "How structured pre-trade planning eliminates most losing trades before they happen", "slug": "pretrade_planning"}
+    ]},
+    {"run_id": "day_17", "items": [
+      {"topic": "Why emotions are not the enemy but unstructured decisions are", "slug": "emotions_vs_structure"},
+      {"topic": "The moment you realize your worst trades all had one thing in common", "slug": "worst_trades_pattern"},
+      {"topic": "How to use paper testing to validate a setup before live capital is at risk", "slug": "paper_testing_validation"}
+    ]},
+    {"run_id": "day_18", "items": [
+      {"topic": "Why traders who track their rule breaks improve faster than those who do not", "slug": "tracking_rule_breaks"},
+      {"topic": "The difference between knowing your edge and trusting your edge", "slug": "knowing_vs_trusting"},
+      {"topic": "How automation enforces your discipline when your mindset cannot", "slug": "automation_discipline"}
+    ]},
+    {"run_id": "day_19", "items": [
+      {"topic": "Why most trading losses are not strategy failures they are execution failures", "slug": "execution_failures"},
+      {"topic": "The power of having a hard rule you never break no matter what", "slug": "unbreakable_rule"},
+      {"topic": "How to build the kind of process that still works on your worst days", "slug": "process_worst_days"}
+    ]},
+    {"run_id": "day_20", "items": [
+      {"topic": "Why the traders you admire are not smarter they are more systematic", "slug": "systematic_traders"},
+      {"topic": "The single habit that would have saved your biggest losing trades", "slug": "single_habit"},
+      {"topic": "How XeanVI helps you trade the plan you made when you were thinking clearly", "slug": "trade_your_plan"}
+    ]},
+    {"run_id": "day_21", "items": [
+      {"topic": "Why cutting losses fast is the most profitable skill in trading", "slug": "cutting_losses"},
+      {"topic": "The validation gate that filters out 80 percent of bad trade ideas", "slug": "validation_gate"},
+      {"topic": "How building consistency compounds into real results over time", "slug": "consistency_compounds"}
+    ]},
+    {"run_id": "day_22", "items": [
+      {"topic": "Why the market rewards traders who wait for their exact setup", "slug": "wait_for_setup"},
+      {"topic": "The trading journal entry you need to write after every rule break", "slug": "rule_break_journal"},
+      {"topic": "How to stop letting one bad morning ruin your entire trading week", "slug": "bad_morning_recovery"}
+    ]},
+    {"run_id": "day_23", "items": [
+      {"topic": "Why successful traders treat their system like a business not a casino", "slug": "trading_as_business"},
+      {"topic": "The pre-trade checklist that has saved accounts from unnecessary losses", "slug": "account_saving_checklist"},
+      {"topic": "How execution quality is the difference between break-even and profitable trading", "slug": "execution_quality"}
+    ]},
+    {"run_id": "day_24", "items": [
+      {"topic": "Why traders who build systems outperform traders who rely on instinct", "slug": "systems_vs_instinct"},
+      {"topic": "The mindset shift that turns a losing streak into a learning opportunity", "slug": "losing_streak_mindset"},
+      {"topic": "How to know when your process is working even when results are not", "slug": "process_vs_results"}
+    ]},
+    {"run_id": "day_25", "items": [
+      {"topic": "Why the hardest part of trading is not finding opportunities but ignoring bad ones", "slug": "ignoring_bad_setups"},
+      {"topic": "The accountability system every serious trader needs but most never build", "slug": "accountability_system"},
+      {"topic": "How to trade with the same discipline on day 30 as you did on day one", "slug": "sustained_discipline"}
+    ]},
+    {"run_id": "day_26", "items": [
+      {"topic": "Why the gap between your trading plan and your trading results is always execution", "slug": "plan_results_gap"},
+      {"topic": "The rule that would have kept your biggest losers small", "slug": "biggest_losers_rule"},
+      {"topic": "How structured trading beats talented but undisciplined trading every time", "slug": "structured_beats_talented"}
+    ]},
+    {"run_id": "day_27", "items": [
+      {"topic": "Why your trading edge only works if your execution does", "slug": "edge_requires_execution"},
+      {"topic": "The decision framework that stops emotional trades before they start", "slug": "decision_framework"},
+      {"topic": "How to build a trading routine that makes discipline automatic", "slug": "automatic_discipline"}
+    ]},
+    {"run_id": "day_28", "items": [
+      {"topic": "Why most traders know exactly what they are doing wrong but cannot stop", "slug": "know_but_cannot_stop"},
+      {"topic": "The process gap between consistently losing and consistently winning traders", "slug": "process_gap"},
+      {"topic": "How XeanVI turns your trading rules into an enforceable system", "slug": "xeanvi_enforceable"}
+    ]},
+    {"run_id": "day_29", "items": [
+      {"topic": "Why trading without a validated process is just expensive guessing", "slug": "expensive_guessing"},
+      {"topic": "The one thing that changes when traders start following their own rules consistently", "slug": "following_rules_change"},
+      {"topic": "How to build the trader identity that actually sticks long term", "slug": "trader_identity"}
+    ]},
+    {"run_id": "day_30", "items": [
+      {"topic": "Why the best trade you ever make might be the one you do not take", "slug": "best_trade_no_trade"},
+      {"topic": "The execution standard that defines elite traders from average ones", "slug": "execution_standard"},
+      {"topic": "How 30 days of process discipline transforms your trading results", "slug": "thirty_days_discipline"}
+    ]}
+  ]
+}
