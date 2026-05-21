@@ -220,3 +220,69 @@ def _elite_fallback(topic: str, pain: str) -> str:
         f"The 3 things that will end your trading career: sizing up after a big win. Averaging into a loser. Moving your stop one more time. Every trader knows this. Every trader has done all three in the same session. XEANVI enforces the rules when your conviction is at its most dangerous.",
     ]
     return random.choice(fallbacks)
+
+
+# ── Compatibility wrapper — storyboard.py calls this name ────────────────────
+def generate_reel_script(topic: str) -> dict | None:
+    """
+    Called by storyboard.py. Returns structured dict with hook/problem/insight/cta
+    AND a full voiceover script. Returns None on failure so storyboard falls back.
+    """
+    try:
+        import google.generativeai as genai
+        import os, re
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+        fw = _select_framework(topic, topic)
+
+        prompt = f"""Write a viral trading reel script for this topic: {topic}
+
+Use the "{fw['name']}" framework.
+Hook style: {fw['hook_template']}
+Hook examples (inspire only, don't copy): {fw['examples'][0]}
+
+Return ONLY a JSON object with these exact keys — no markdown, no explanation:
+{{
+  "hook": "5-8 word scroll-stopping opening line",
+  "problem": "1-2 sentence specific pain point with a real number",
+  "insight": "1-2 sentence truth/turn that reframes the problem",
+  "cta": "1 sentence natural XEANVI mention as the solution",
+  "voiceover": "full 65-90 word script combining all four parts naturally"
+}}
+
+Rules:
+- hook must work as a standalone sentence that stops thumbs
+- use ONE specific believable number somewhere (dollar amount, percentage, days)
+- raw trader voice — like a DM at 2am after a bad session
+- NO pause markers, NO stage directions, NO markdown in the values
+- voiceover is plain text only, natural sentences, no labels"""
+
+        model = genai.GenerativeModel(
+            model_name=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+            system_instruction=SYSTEM_PROMPT,
+        )
+        resp = model.generate_content(prompt)
+        text = resp.text.strip()
+
+        # Strip markdown code fences if present
+        text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.M)
+        text = re.sub(r'\s*```$', '', text, flags=re.M)
+
+        import json
+        data = json.loads(text.strip())
+
+        # Strip pause markers from every field
+        for key in ["hook", "problem", "insight", "cta", "voiceover"]:
+            if key in data:
+                val = data[key]
+                val = re.sub(r'\((?:short |long )?pause\)', ' ', val, flags=re.I)
+                val = re.sub(r'\[(?:short |long )?pause\]', ' ', val, flags=re.I)
+                val = re.sub(r'\s{2,}', ' ', val).strip()
+                data[key] = val
+
+        logger.info("generate_reel_script OK — framework=%s hook=%s", fw['name'], data.get('hook','')[:40])
+        return data
+
+    except Exception as e:
+        logger.warning("generate_reel_script failed: %s", e)
+        return None

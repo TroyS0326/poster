@@ -133,7 +133,13 @@ def generate_storyboard(topic, audience=None, tone=DEFAULT_TONE, call_to_action=
         voiceover_script = f"{joined}." if (include_voiceover_script or voiceover_audio_path) else ""
 
     durations = _allocate_scene_durations(duration_seconds, scene_count)
-    scenes = [{"text": text, "duration": dur} for text, dur in zip(scene_texts, durations)]
+    # Strip pause markers from scene text (they belong in voiceover only)
+    import re as _re
+    def _clean(t):
+        t = _re.sub(r"\((?:short |long )?pause\)", " ", t, flags=_re.I)
+        t = _re.sub(r"\[(?:short |long )?pause\]", " ", t, flags=_re.I)
+        return _re.sub(r"\s{2,}", " ", t).strip()
+    scenes = [{"text": _clean(text), "duration": dur} for text, dur in zip(scene_texts, durations)]
 
     if voiceover_audio_path:
         _validate_voiceover_audio_path(voiceover_audio_path)

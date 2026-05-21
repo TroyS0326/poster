@@ -333,7 +333,7 @@ def render_reel(config, output_path) -> None:
 
     clip.write_videofile(str(out), codec="libx264", audio_codec="aac",
                          fps=config.fps, logger=None,
-                         ffmpeg_params=["-crf","18","-preset","fast"])
+                         ffmpeg_params=["-crf","18","-preset","fast","-movflags","+faststart"])
 
 def main() -> int:
     from reels.config import load_reel_config
