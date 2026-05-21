@@ -58,6 +58,30 @@ def _next_pending(payload: dict, state: dict, force_retry_failed: bool):
     return None
 
 
+
+def _smart_sleep(post_type: str = "reel", fallback_hours: float = 8) -> None:
+    """Sleep until the next optimal posting window."""
+    try:
+        from reels.post_scheduler import seconds_until_next_window, is_good_posting_time
+        secs = seconds_until_next_window(post_type)
+    except Exception:
+        secs = fallback_hours * 3600
+    h, m = int(secs // 3600), int((secs % 3600) // 60)
+    import logging
+    logging.getLogger(__name__).info(
+        "Next %s window in %dh %dm — sleeping", post_type, h, m
+    )
+    time.sleep(max(secs, 60))
+
+
+def _ok_to_post_now() -> bool:
+    """Return True if current time is inside an optimal posting window."""
+    try:
+        from reels.post_scheduler import is_good_posting_time
+        return is_good_posting_time()
+    except Exception:
+        return True   # fail open — don't block posts if module missing
+
 def run_scheduler(queue: Path, public_base_url: str, interval_hours: float = 8, once: bool = False, dry_run: bool = False, force_retry_failed: bool = False):
     payload = load_queue_input(queue)
     state_file = _state_path()
@@ -67,9 +91,16 @@ def run_scheduler(queue: Path, public_base_url: str, interval_hours: float = 8, 
         if not nxt:
             if once:
                 return {"processed": 0}
-            time.sleep(max(60, interval_hours * 3600))
+            time.sleep(1800)  # check again in 30min
             continue
         run_id, slug, key = nxt
+        if not dry_run and not _ok_to_post_now():
+            import logging
+            logging.getLogger(__name__).info(
+                "Outside optimal window — waiting for next slot (slug=%s)", slug
+            )
+            _smart_sleep("reel", interval_hours)
+            continue
         result = run_autopost(queue, run_id, public_base_url, limit=1, dry_run=dry_run)
         item = result.get("items", [{}])[0] if result.get("items") else {}
         platform = result.get("platform", "none")
@@ -90,7 +121,7 @@ def run_scheduler(queue: Path, public_base_url: str, interval_hours: float = 8, 
         _save_state(state_file, state)
         if once:
             return {"processed": 1, "run_id": run_id, "slug": slug}
-        time.sleep(interval_hours * 3600)
+        _smart_sleep('reel', interval_hours)
 
 
 def main() -> int:

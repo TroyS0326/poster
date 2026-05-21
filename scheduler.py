@@ -290,7 +290,19 @@ def schedule_posts(config, logger):
             run_workflow(config, logger)
         except Exception as exc:
             logger.exception("unexpected scheduler workflow failure: %s", exc)
-        jitter = random.randint(0, max(0, config.randomize_interval_minutes))
-        sleep_seconds = (interval * 3600) + (jitter * 60)
-        logger.info("sleep time: %s seconds", sleep_seconds)
+        # Smart timing — sleep until next optimal image posting window
+        try:
+            from reels.post_scheduler import seconds_until_next_window, is_good_posting_time
+            if not is_good_posting_time():
+                sleep_seconds = seconds_until_next_window("image")
+                logger.info("Outside optimal window — sleeping %dh %dm until next slot",
+                            int(sleep_seconds//3600), int((sleep_seconds%3600)//60))
+            else:
+                jitter = random.randint(0, max(0, config.randomize_interval_minutes))
+                sleep_seconds = (interval * 3600) + (jitter * 60)
+                logger.info("sleep time: %ds (next image slot)", sleep_seconds)
+        except Exception:
+            jitter = random.randint(0, max(0, config.randomize_interval_minutes))
+            sleep_seconds = (interval * 3600) + (jitter * 60)
+            logger.info("sleep time: %s seconds", sleep_seconds)
         time.sleep(sleep_seconds)
